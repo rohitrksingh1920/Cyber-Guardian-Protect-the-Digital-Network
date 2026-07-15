@@ -78,7 +78,7 @@ export default function RunnerStage({
       if (!s || phase !== "running") return;
       s.lane = Math.max(0, Math.min(2, s.lane + dir));
     },
-    [phase]
+    [phase],
   );
 
   useEffect(() => {
@@ -170,7 +170,12 @@ export default function RunnerStage({
           }
         } else if (roll < 0.55) {
           const lane = Math.floor(Math.random() * 3);
-          s.obstacles.push({ type: "trojan", lane, y: -160, id: Math.random() });
+          s.obstacles.push({
+            type: "trojan",
+            lane,
+            y: -160,
+            id: Math.random(),
+          });
           if (Math.random() < 0.6) {
             const free = [0, 1, 2].filter((l) => l !== lane);
             const fl = free[Math.floor(Math.random() * free.length)];
@@ -193,7 +198,8 @@ export default function RunnerStage({
       // player vertical pos
       let playerLift = 0;
       if (s.jumpT > 0 && s.jumpT < 2) {
-        playerLift = Math.sin(Math.min(s.jumpT, 1) * Math.PI * (s.jumpT < 1 ? 1 : 0)) * 0;
+        playerLift =
+          Math.sin(Math.min(s.jumpT, 1) * Math.PI * (s.jumpT < 1 ? 1 : 0)) * 0;
         const t = s.jumpT;
         playerLift = Math.sin(Math.min(t, 1) * Math.PI) * 95;
       }
@@ -288,7 +294,7 @@ export default function RunnerStage({
     }
     ctx.fillStyle = "rgba(0,184,255,0.04)";
     for (let i = -1; i < 6; i++) {
-      const bx = i * 110 - (off * 1.6) % 110;
+      const bx = i * 110 - ((off * 1.6) % 110);
       const bh = 90 + ((i * 53) % 130);
       ctx.fillRect(bx, GROUND_Y - bh - 10, 64, bh);
     }
@@ -304,7 +310,12 @@ export default function RunnerStage({
     ctx.strokeStyle = "rgba(0,223,255,0.35)";
     ctx.lineWidth = 2;
     const scroll = (s.frame * s.speed) % 40;
-    for (let lx of [LANES[0] - 65, LANES[1] - 65, LANES[2] - 65, LANES[2] + 65]) {
+    for (let lx of [
+      LANES[0] - 65,
+      LANES[1] - 65,
+      LANES[2] - 65,
+      LANES[2] + 65,
+    ]) {
       ctx.beginPath();
       ctx.moveTo(lx, GROUND_Y);
       ctx.lineTo(lx, H);
@@ -421,7 +432,9 @@ export default function RunnerStage({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
       <div
         style={{
           display: "flex",
@@ -434,7 +447,9 @@ export default function RunnerStage({
         }}
       >
         <span style={{ color }}>{label}</span>
-        <span style={{ color: "var(--gold)" }}>SCORE {hud.score} / {targetScore}</span>
+        <span style={{ color: "var(--gold)" }}>
+          SCORE {hud.score} / {targetScore}
+        </span>
         <span style={{ color: "var(--green)" }}>📦 {hud.data}</span>
         <span style={{ color: "var(--red)" }}>
           {"❤".repeat(hud.lives)}
@@ -462,16 +477,33 @@ export default function RunnerStage({
 
         {phase === "intro" && (
           <Overlay>
-            <h2 style={{ color, fontFamily: "var(--font-head)", fontSize: 18, marginBottom: 10 }}>
+            <h2
+              style={{
+                color,
+                fontFamily: "var(--font-head)",
+                fontSize: 18,
+                marginBottom: 10,
+              }}
+            >
               {label}
             </h2>
-            <p style={{ fontSize: 13, color: "var(--text-dim)", maxWidth: 320, lineHeight: 1.6 }}>
-              Dodge red MALWARE (jump), duck under orange FIREWALLS (slide), switch lanes
-              around purple TROJAN blocks, and collect green DATA PACKETS. Reach{" "}
-              <b style={{ color: "var(--gold)" }}>{targetScore} score</b> to clear the run and
-              unlock the security quiz.
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--text-dim)",
+                maxWidth: 320,
+                lineHeight: 1.6,
+              }}
+            >
+              Dodge red MALWARE (jump), duck under orange FIREWALLS (slide),
+              switch lanes around purple TROJAN blocks, and collect green DATA
+              PACKETS. Reach{" "}
+              <b style={{ color: "var(--gold)" }}>{targetScore} score</b> to
+              clear the run and unlock the security quiz.
             </p>
-            <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 10 }}>
+            <p
+              style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 10 }}
+            >
               Arrow keys / WASD or swipe
             </p>
             <button onClick={startRun} style={btnStyle(color)}>
@@ -482,7 +514,13 @@ export default function RunnerStage({
 
         {phase === "hit" && (
           <Overlay>
-            <h2 style={{ color: "var(--red)", fontFamily: "var(--font-head)", fontSize: 18 }}>
+            <h2
+              style={{
+                color: "var(--red)",
+                fontFamily: "var(--font-head)",
+                fontSize: 18,
+              }}
+            >
               SYSTEM BREACHED
             </h2>
             <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 8 }}>
@@ -496,7 +534,13 @@ export default function RunnerStage({
 
         {phase === "cleared" && (
           <Overlay>
-            <h2 style={{ color: "var(--green)", fontFamily: "var(--font-head)", fontSize: 18 }}>
+            <h2
+              style={{
+                color: "var(--green)",
+                fontFamily: "var(--font-head)",
+                fontSize: 18,
+              }}
+            >
               RUN CLEARED ✅
             </h2>
             <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 8 }}>

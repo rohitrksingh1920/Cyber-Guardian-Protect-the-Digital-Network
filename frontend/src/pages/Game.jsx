@@ -28,7 +28,11 @@ export default function Game() {
 
     const onMessage = async (e) => {
       const data = e.data;
-      if (!data || typeof data !== "object" || !String(data.type || "").startsWith("CYBER_GUARDIAN_")) {
+      if (
+        !data ||
+        typeof data !== "object" ||
+        !String(data.type || "").startsWith("CYBER_GUARDIAN_")
+      ) {
         return;
       }
 
@@ -38,12 +42,16 @@ export default function Game() {
       }
 
       if (data.type === "CYBER_GUARDIAN_LOOP_COMPLETE") {
-        setLastEvent(`Lap ${data.cycle} complete — score ${data.score}. Difficulty is stepping up!`);
+        setLastEvent(
+          `Lap ${data.cycle} complete — score ${data.score}. Difficulty is stepping up!`,
+        );
         return;
       }
 
       if (data.type === "CYBER_GUARDIAN_GAMEOVER") {
-        setLastEvent(`Breach detected on sector ${data.level} — final score ${data.score}`);
+        setLastEvent(
+          `Breach detected on sector ${data.level} — final score ${data.score}`,
+        );
         if (submittingRef.current) return;
         submittingRef.current = true;
         const timeTaken = Math.floor((Date.now() - runStartRef.current) / 1000);
@@ -76,7 +84,9 @@ export default function Game() {
   }, [refreshUser]);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+    >
       <Topbar />
 
       <div
@@ -109,7 +119,9 @@ export default function Game() {
           ← EXIT TO DASHBOARD
         </button>
         {lastEvent && (
-          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>{lastEvent}</div>
+          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
+            {lastEvent}
+          </div>
         )}
       </div>
 
@@ -135,7 +147,9 @@ export default function Game() {
               fontSize: 13,
             }}
           >
-            <span style={{ color: "var(--gold)", fontFamily: "var(--font-head)" }}>
+            <span
+              style={{ color: "var(--gold)", fontFamily: "var(--font-head)" }}
+            >
               +{banner.xp} XP
             </span>
             {banner.levelUp && (
@@ -188,7 +202,12 @@ export default function Game() {
           <iframe
             title="Cyber Dash: Firewall Runner"
             src="/games/cyber-guardian-game.html"
-            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              border: "none",
+              display: "block",
+            }}
             allow="autoplay; fullscreen"
           />
         </div>
