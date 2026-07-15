@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cyber Dash: Firewall Runner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Poppins:wght@400;500;600;700&display=swap');
+
+  :root{
+    --sky-top:#5ec8f0;
+    --sky-bottom:#bdeaff;
+    --sun:#ffe066;
+    --grass:#5fbf5f;
+    --grass-dark:#4aa64a;
+    --track:#8a7361;
+    --track-dark:#6e5a49;
+    --coin:#ffcc33;
+    --coin-dark:#e0a500;
+    --shield:#2ec4f0;
+    --shield-dark:#1a8fb8;
+    --danger:#ff5a5f;
+    --panel:#ffffff;
+    --panel-border:#1c2b4a;
+    --ink:#14213d;
+    --accent:#ff8a3d;
+    --good:#3ac47d;
+    --bad:#ff5a5f;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    font-family:'Poppins',sans-serif;
+    background:#0c1024;
+    -webkit-user-select:none;user-select:none;
+    touch-action:none;
+  }
+
+  #gameRoot{
+    position:relative;
+    width:100%;height:100%;
+    max-width:900px;max-height:600px;
+    margin:0 auto;
+    background:#000;
+    box-shadow:0 0 60px rgba(0,0,0,.6);
+    overflow:hidden;
+  }
+  @media (max-width:900px){
+    #gameRoot{max-width:100%;max-height:100%;}
+  }
+
+  canvas{
+    display:block;
+    width:100%;height:100%;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute;top:0;left:0;width:100%;
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding:10px 14px;pointer-events:none;z-index:10;
+    font-family:'Baloo 2',sans-serif;
+  }
+  .hud-pill{
+    background:rgba(20,33,61,.75);
+    border:2px solid rgba(255,255,255,.25);
+    border-radius:14px;
+    padding:6px 12px;
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+    display:flex;align-items:center;gap:8px;
+    backdrop-filter:blur(2px);
+  }
+  .hud-left{display:flex;flex-direction:column;gap:6px;}
+  .hud-right{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  .hearts span{margin-right:3px;font-size:16px;}
+  #levelProgressWrap{
+    width:150px;height:10px;background:rgba(255,255,255,.25);
+    border-radius:6px;overflow:hidden;margin-top:2px;
+  }
+  #levelProgressBar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--coin),var(--accent));
+    transition:width .15s linear;
+  }
+
+  /* ---------- Overlays (shared) ---------- */
+  .overlay{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,rgba(10,14,30,.88),rgba(10,14,30,.96));
+    z-index:20;
+    padding:20px;
+  }
+  .hidden{display:none !important;}
+
+  .panel{
+    background:var(--panel);
+    border-radius:22px;
+    border:4px solid var(--panel-border);
+    box-shadow:0 14px 0 rgba(0,0,0,.25);
+    padding:28px 30px;
+    max-width:480px;width:100%;
+    text-align:center;
+    max-height:92%;
+    overflow-y:auto;
+  }
+  .panel h1{
+    font-family:'Baloo 2',sans-serif;
+    font-size:32px;margin:0 0 6px;color:var(--ink);
+    letter-spacing:.5px;
+  }
+  .panel h2{
+    font-family:'Baloo 2',sans-serif;
+    font-size:24px;margin:0 0 10px;color:var(--ink);
+  }
+  .subtitle{color:#5a6685;font-size:14px;margin-bottom:18px;font-weight:500;}
+
+  .btn{
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;font-size:18px;
+    border:none;border-radius:14px;
+    padding:14px 26px;
+    cursor:pointer;
+    color:#fff;
+    background:linear-gradient(180deg,var(--shield),var(--shield-dark));
+    box-shadow:0 6px 0 #10688a, 0 6px 14px rgba(0,0,0,.25);
+    transition:transform .08s ease;
+    pointer-events:auto;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #10688a;}
+  .btn.orange{background:linear-gradient(180deg,#ffab5c,var(--accent));box-shadow:0 6px 0 #c85f14,0 6px 14px rgba(0,0,0,.25);}
+  .btn.orange:active{box-shadow:0 2px 0 #c85f14;}
+  .btn.small{font-size:14px;padding:10px 16px;border-radius:10px;box-shadow:0 4px 0 #10688a;}
+  .btn.small:active{box-shadow:0 1px 0 #10688a;}
+  .btn:disabled{opacity:.5;cursor:default;}
+
+  .badgeRow{display:flex;justify-content:center;gap:10px;margin:14px 0;flex-wrap:wrap;}
+  .levelChip{
+    width:34px;height:34px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Baloo 2',sans-serif;font-weight:700;font-size:14px;
+    border:2px solid #d8dcea;color:#9aa2bd;background:#f2f3f8;
+  }
+  .levelChip.done{background:var(--good);border-color:#28a065;color:#fff;}
+  .levelChip.current{background:var(--accent);border-color:#c85f14;color:#fff;}
+
+  /* how to play */
+  .controls-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+    text-align:left;margin:14px 0;font-size:13px;color:var(--ink);
+  }
+  .controls-grid div{
+    background:#f2f3f8;border-radius:10px;padding:8px 10px;font-weight:500;
+  }
+  .controls-grid b{color:var(--shield-dark);}
+
+  /* ---------- Quiz ---------- */
+  #quizOverlay .panel{max-width:520px;}
+  #quizHeader{
+    display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;
+  }
+  #quizIcon{font-size:26px;}
+  #quizQCount{
+    font-size:12px;color:#5a6685;font-weight:600;margin-bottom:14px;
+  }
+  #quizQuestion{
+    font-family:'Baloo 2',sans-serif;font-size:19px;color:var(--ink);
+    margin-bottom:16px;line-height:1.35;
+  }
+  #quizChoices{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;}
+  .choiceBtn{
+    font-family:'Poppins',sans-serif;
+    text-align:left;
+    background:#f2f3f8;
+    border:2px solid #e0e3ee;
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:14.5px;font-weight:500;
+    color:var(--ink);
+    cursor:pointer;
+    transition:.12s ease;
+  }
+  .choiceBtn:hover{border-color:var(--shield);background:#eaf7ff;}
+  .choiceBtn.correct{background:#e3faf0;border-color:var(--good);color:#1b7a4c;font-weight:700;}
+  .choiceBtn.wrong{background:#ffeceb;border-color:var(--bad);color:#b8332f;font-weight:700;}
+  .choiceBtn:disabled{cursor:default;}
+
+  #quizFeedback{
+    min-height:22px;font-weight:700;font-size:14px;margin:8px 0;
+  }
+  #quizFeedback.good{color:var(--good);}
+  #quizFeedback.bad{color:var(--bad);}
+
+  /* ---------- Mobile controls ---------- */
+  #mobileControls{
+    position:absolute;bottom:0;left:0;width:100%;
+    display:none;
+    justify-content:space-between;align-items:flex-end;
+    padding:16px;z-index:15;pointer-events:none;
+  }
+  #mobileControls.show{display:flex;}
+  .mc-group{display:flex;gap:10px;pointer-events:auto;}
+  .mc-btn{
+    width:56px;height:56px;border-radius:50%;
+    background:rgba(255,255,255,.18);
+    border:2px solid rgba(255,255,255,.5);
+    color:#fff;font-size:22px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(3px);
+  }
+  .mc-btn:active{background:rgba(255,255,255,.4);}
+
+  #pauseBtn{
+    position:absolute;top:12px;left:50%;transform:translateX(-50%);
+    z-index:12;pointer-events:auto;
+    background:rgba(20,33,61,.75);border:2px solid rgba(255,255,255,.25);
+    color:#fff;border-radius:10px;padding:6px 12px;font-family:'Baloo 2';
+    font-weight:700;cursor:pointer;
+  }
+
+  .flash{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    background:rgba(255,0,0,.25);z-index:8;pointer-events:none;opacity:0;
+  }
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:#d8dcea;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div id="gameRoot">
+  <canvas id="gameCanvas"></canvas>
+  <div class="flash" id="flash"></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-left">
+      <div class="hud-pill hearts" id="heartsPill">❤️❤️❤️</div>
+      <div class="hud-pill">🛡️ Level <span id="hudLevel">1</span>/6<span id="hudLap"></span></div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-pill">💾 <span id="hudScore">0</span></div>
+      <div class="hud-pill" style="flex-direction:column;align-items:flex-start;">
+        <span style="font-size:11px;opacity:.85;">Progress</span>
+        <div id="levelProgressWrap"><div id="levelProgressBar"></div></div>
+      </div>
+    </div>
+  </div>
+  <button id="pauseBtn">⏸ Pause</button>
+
+  <!-- Mobile controls -->
+  <div id="mobileControls">
+    <div class="mc-group">
+      <div class="mc-btn" id="btnLeft">◀</div>
+      <div class="mc-btn" id="btnDown">▼</div>
+      <div class="mc-btn" id="btnRight">▶</div>
+    </div>
+    <div class="mc-group">
+      <div class="mc-btn" id="btnUp">▲</div>
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="overlay" id="startOverlay">
+    <div class="panel">
+      <h1>🛡️ Cyber Dash</h1>
+      <div class="subtitle">Firewall Runner — dodge threats, collect data bits, and prove your cyber smarts. Endless mode: sectors loop forever, getting a little tougher each lap!</div>
+      <div class="badgeRow" id="levelChipsStart"></div>
+      <div class="controls-grid">
+        <div>⬅️➡️ / <b>A D</b> — Switch lane</div>
+        <div>⬆️ / <b>W / Space</b> — Jump</div>
+        <div>⬇️ / <b>S</b> — Slide</div>
+        <div>🎯 Clear a sector's quiz to keep the run going!</div>
+      </div>
+      <button class="btn" id="startBtn">▶ Start Run</button>
+    </div>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div class="overlay hidden" id="quizOverlay">
+    <div class="panel">
+      <div id="quizHeader">
+        <span id="quizIcon">🔐</span>
+        <h2>Security Checkpoint</h2>
+      </div>
+      <div id="quizQCount">Question 1 of 3</div>
+      <div id="quizQuestion">Question text</div>
+      <div id="quizChoices"></div>
+      <div id="quizFeedback"></div>
+    </div>
+  </div>
+
+  <!-- Level Complete (pre-quiz) -->
+  <div class="overlay hidden" id="levelIntroOverlay">
+    <div class="panel">
+      <h2 id="levelIntroTitle">Level 1: Basic Firewall</h2>
+      <div class="subtitle" id="levelIntroDesc">Reach the checkpoint by collecting data bits and dodging malware.</div>
+      <button class="btn orange" id="levelIntroBtn">Begin Level</button>
+    </div>
+  </div>
+
+  <!-- Level Passed -->
+  <div class="overlay hidden" id="levelPassOverlay">
+    <div class="panel">
+      <h2>✅ Checkpoint Cleared!</h2>
+      <div class="subtitle" id="levelPassDesc">You secured the sector. Ready for the next challenge?</div>
+      <button class="btn" id="nextLevelBtn">Continue</button>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div class="overlay hidden" id="gameOverOverlay">
+    <div class="panel">
+      <h2>💥 Breach Detected</h2>
+      <div class="subtitle">Your firewall was compromised. Final score: <b id="finalScore">0</b></div>
+      <button class="btn orange" id="retryBtn">Retry Level</button>
+    </div>
+  </div>
+
+  <!-- Victory -->
+  <div class="overlay hidden" id="victoryOverlay">
+    <div class="panel">
+      <h1>🏆 Cyber Guardian!</h1>
+      <div class="subtitle">You cleared all 6 sectors and mastered every checkpoint. Total score: <b id="victoryScore">0</b></div>
+      <button class="btn" id="playAgainBtn">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div class="overlay hidden" id="pauseOverlay">
+    <div class="panel">
+      <h2>⏸ Paused</h2>
+      <button class="btn" id="resumeBtn">Resume</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ======================= LEVEL + QUIZ DATA ======================= */
+const LEVELS = [
+  { name:"Basic Firewall", desc:"Warm up your reflexes. Dodge stray malware and grab data bits.",
+    speed:4.2, spawnEvery:1.05, goal:1000, quizTopic:"Password Security", quizIcon:"🔑",
+    quiz:[
+      {q:"Which password is the STRONGEST?",
+       choices:["admin123","password","R@h!t#2026!!","12345678"], a:2,
+       tip:"Strong passwords use uppercase, lowercase, numbers and special characters, and are 12+ characters long."},
+      {q:"A website asks you to save your password in plain text in a file. What should you do?",
+       choices:["Save it — it's convenient","Use a password manager instead","Write it on paper","Use the same password everywhere"], a:1,
+       tip:"Password managers encrypt and store passwords securely. Never store passwords in plain text files."},
+      {q:"You receive an email saying your account was hacked. What is the FIRST thing you should do?",
+       choices:["Ignore it","Change your password immediately","Reply asking for details","Click the link in the email"], a:1,
+       tip:"Never click links in suspicious emails. Go directly to the website to change your password."},
+      {q:"Which of these is a BAD password habit?",
+       choices:["Using 2FA","Using the same password for all accounts","Using a password manager","Changing passwords regularly"], a:1,
+       tip:"Reusing passwords means if one account is compromised, ALL your accounts are at risk."},
+      {q:"What does 2FA stand for?",
+       choices:["Two-Factor Authentication","Two-File Access","Transfer From Account","Two-Front Attack"], a:0,
+       tip:"Two-Factor Authentication adds a second layer of security beyond just your password."},
+    ]
+  },
+  { name:"Phishing Alley", desc:"Watch for suspicious barrels — just like phishing, they're disguised as harmless.",
+    speed:4.6, spawnEvery:1.0, goal:1250, quizTopic:"Phishing Awareness", quizIcon:"🎣",
+    quiz:[
+      {q:"An email urgently asks you to click a link to 'verify your bank account'. Best move?",
+       choices:["Click the link right away","Reply with your account number","Type the bank's URL yourself or call them","Forward it to friends"], a:2},
+      {q:"Which is a common red flag of a phishing email?",
+       choices:["Urgent threats and a mismatched sender address","Perfect grammar","A company logo","Being sent on a weekday"], a:0},
+      {q:"You accidentally clicked a phishing link. What should you do first?",
+       choices:["Keep browsing normally","Disconnect, change passwords, and scan for malware","Ignore it, nothing will happen","Turn up your speaker volume"], a:1},
+      {q:"Which sender address below is a phishing red flag?",
+       choices:["security@paypa1.com","newsletter@amazon.com","hr@yourcompany.com","no-reply@github.com"], a:0,
+       tip:"'paypa1.com' swaps the letter l for the number 1 — classic typosquatting used to impersonate PayPal."},
+      {q:"An email claims to be Microsoft Defender and asks you to call a phone number immediately. What's really going on?",
+       choices:["It's a genuine Windows alert","It's a tech-support scam using fear tactics","It's a routine update reminder","It's a spam filter test"], a:1,
+       tip:"Microsoft will never ask you to call a random number to fix a 'virus' — that's a classic tech support scam."},
+    ]
+  },
+  { name:"Malware Maze", desc:"Faster threats ahead. Learn to recognize different malware types.",
+    speed:5.0, spawnEvery:0.95, goal:1500, quizTopic:"Malware Types", quizIcon:"🦠",
+    quiz:[
+      {q:"What is ransomware?",
+       choices:["A free antivirus tool","Malware that encrypts files and demands payment","A type of firewall","A password manager"], a:1},
+      {q:"Malware that copies itself across a network with no user action is called a:",
+       choices:["Worm","Cookie","Firewall","Browser extension"], a:0},
+      {q:"Software that looks legitimate but hides malicious code is a:",
+       choices:["Trojan horse","Spreadsheet","VPN","Cache file"], a:0},
+      {q:"Which of these files is MOST likely to be malware?",
+       choices:["quarterly_report.pdf","free_antivirus_setup.exe","resume_final.docx","company_logo.png"], a:1,
+       tip:"Unsolicited .exe installers claiming to be free antivirus software are a classic malware delivery method."},
+      {q:"A file named 'bank_statement_viewer.scr' is suspicious because:",
+       choices:[".scr files are always completely safe","'.scr' (screensaver) files are commonly used to disguise executable malware","It's actually a Word document","It's a spreadsheet file"], a:1,
+       tip:".scr files are executables in disguise and are a well-known malware trick."},
+    ]
+  },
+  { name:"Secure Streets", desc:"Speeding up! Stay sharp on safe browsing habits.",
+    speed:5.4, spawnEvery:0.9, goal:1750, quizTopic:"Safe Browsing", quizIcon:"🔒",
+    quiz:[
+      {q:"A padlock + HTTPS in your browser bar means:",
+       choices:["The site can never be a scam","Your connection to the site is encrypted","The government owns the site","The site is virus-free"], a:1},
+      {q:"On public Wi-Fi, the safest habit is to:",
+       choices:["Log into your bank freely","Use a VPN and avoid sensitive logins","Disable your antivirus","Share the Wi-Fi password publicly"], a:1},
+      {q:"Before downloading new software, you should:",
+       choices:["Grab it from any popup ad","Verify it's from an official source & check reviews","Disable your firewall first","Turn off updates"], a:1},
+      {q:"You're on public Wi-Fi and your bank's site keeps oddly redirecting you. This could be a sign of:",
+       choices:["A software update","A Man-in-the-Middle (MITM) attack intercepting your traffic","Faster internet","A firewall update"], a:1,
+       tip:"Public Wi-Fi makes it easier for attackers to intercept traffic — always use a VPN and check for HTTPS."},
+      {q:"A site's login form behaves strangely after you type an unusual character into it. This may indicate an attempted:",
+       choices:["SQL Injection attack on the site","Normal browser update","DNS cache refresh","Cookie expiration"], a:0,
+       tip:"SQL Injection attacks target vulnerable input fields to manipulate a site's database — stick to reputable, well-secured sites."},
+    ]
+  },
+  { name:"Social Engineering Sprint", desc:"Threats get sneakier — and so does this sector.",
+    speed:5.8, spawnEvery:0.85, goal:2000, quizTopic:"Social Engineering", quizIcon:"🎭",
+    quiz:[
+      {q:"A caller claims to be 'IT support' and asks for your password to 'fix an issue'. You should:",
+       choices:["Give it to them, they said IT","Refuse and verify through an official channel","Give a fake password","Hang up and forget about it entirely"], a:1},
+      {q:"'Pretexting' in social engineering means:",
+       choices:["Sending a text message","Creating a fabricated scenario to obtain info","Using two-factor authentication","Encrypting a hard drive"], a:1},
+      {q:"The best defense against social engineering is to:",
+       choices:["Trust anyone who sounds confident","Independently verify identity before sharing info","Share info quickly to be polite","Never answer the phone again"], a:1},
+      {q:"Someone calls claiming to be from your bank's fraud team and asks you to confirm your full card number. You should:",
+       choices:["Give the number since they said 'fraud department'","Hang up and call the bank back using the number on your card","Provide half the number only","Ask them to email the card number back to you"], a:1,
+       tip:"Always verify by calling the official number yourself — never trust caller ID or urgency."},
+      {q:"Tailgating in social engineering refers to:",
+       choices:["Following someone through a secure door without your own access badge","A fast network connection","A type of malware","A password reset method"], a:0,
+       tip:"Tailgating is a physical social engineering technique used to bypass access control."},
+    ]
+  },
+  { name:"Final Sector: Data Vault", desc:"The last run. Prove you've mastered every lesson.",
+    speed:6.2, spawnEvery:0.8, goal:2250, quizTopic:"2FA & Privacy", quizIcon:"🛡️",
+    quiz:[
+      {q:"Two-Factor Authentication (2FA) adds:",
+       choices:["A second verification step beyond your password","A second password only","A faster login","Nothing useful"], a:0},
+      {q:"Which 2FA method is generally considered the safest?",
+       choices:["No 2FA if your password is long","An authenticator app or hardware key","Telling a friend your code","Writing the code on your monitor"], a:1},
+      {q:"Good privacy practice means reviewing app permissions to:",
+       choices:["Allow every permission by default","Limit access to only what's truly needed","Never update the app","Disable your antivirus"], a:1},
+      {q:"If your password is breached but you have 2FA enabled, an attacker:",
+       choices:["Can still log in instantly","Would still need your second factor (like an authenticator code) to get in","Automatically gets locked out forever","Can bypass 2FA with your email address alone"], a:1,
+       tip:"2FA adds a critical second barrier even if your password is stolen."},
+      {q:"A flashlight app asks for access to your contacts, camera, and location. You should:",
+       choices:["Grant everything, apps need it","Deny unnecessary permissions — a flashlight app doesn't need your contacts","Uninstall your phone's OS","Ignore the prompt entirely"], a:1,
+       tip:"Reviewing and limiting app permissions is a key privacy practice."},
+    ]
+  },
+];
+
+/* ======================= CANVAS SETUP ======================= */
+const root = document.getElementById('gameRoot');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W=800,H=500,DPR=1;
+
+function resize(){
+  const rect = root.getBoundingClientRect();
+  W = rect.width; H = rect.height;
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  canvas.width = W*DPR; canvas.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ======================= GAME STATE ======================= */
+const STATE = { START:'start', LEVEL_INTRO:'levelIntro', PLAYING:'playing', QUIZ:'quiz',
+  LEVEL_PASS:'levelPass', GAMEOVER:'gameover', VICTORY:'victory', PAUSED:'paused' };
+let state = STATE.START;
+let prevStateBeforePause = null;
+
+let currentLevel = 0; // index 0..5
+let cycle = 0; // how many full loops through all 6 sectors have been completed (endless mode)
+let diffMult = 1; // difficulty multiplier applied on top of each sector's base numbers, grows slowly per loop
+let pendingNextLevel = 0; // which sector index to start when the player taps "Continue"
+let score = 0;
+let lives = 3;
+let progress = 0; // 0..goal
+let dist = 0;
+let speed = LEVELS[0].speed;
+let baseSpeed = LEVELS[0].speed;
+let spawnTimer = 0;
+let coinSpawnTimer = 0;
+let obstacles = []; // {lane, z, type, hit, passed}
+let coins = []; // {lane, z, taken, phase}
+let particles = []; // {x,y,vx,vy,life,color}
+
+const LANES = [-1,0,1];
+let player = {
+  lane: 0, // index into LANES -> -1,0,1 (logical lane, authoritative for collisions)
+  laneX: 0, // current rendered x offset
+  laneFromX: 0, // x offset at the start of the current lane tween
+  laneToX: 0, // x offset target of the current lane tween
+  laneTweenT: 1, // 0..1 progress through the tween (1 = settled)
+  y: 0, // vertical offset (jump)
+  vy: 0,
+  jumping:false,
+  sliding:false,
+  slideTimer:0,
+  runPhase:0,
+  invuln:0,
+};
+
+const GRAVITY = 2600;
+const JUMP_V = -900;
+const LANE_TWEEN_DURATION = 0.14; // seconds — fast & fixed, so what you see always matches the logical lane quickly
+
+/* ======================= DOM refs ======================= */
+const hudLevel = document.getElementById('hudLevel');
+const hudLap = document.getElementById('hudLap');
+const hudScore = document.getElementById('hudScore');
+const heartsPill = document.getElementById('heartsPill');
+const levelProgressBar = document.getElementById('levelProgressBar');
+const flashEl = document.getElementById('flash');
+
+const startOverlay = document.getElementById('startOverlay');
+const levelIntroOverlay = document.getElementById('levelIntroOverlay');
+const quizOverlay = document.getElementById('quizOverlay');
+const levelPassOverlay = document.getElementById('levelPassOverlay');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const victoryOverlay = document.getElementById('victoryOverlay');
+const pauseOverlay = document.getElementById('pauseOverlay');
+
+const levelIntroTitle = document.getElementById('levelIntroTitle');
+const levelIntroDesc = document.getElementById('levelIntroDesc');
+const levelPassDesc = document.getElementById('levelPassDesc');
+const finalScoreEl = document.getElementById('finalScore');
+const victoryScoreEl = document.getElementById('victoryScore');
+
+const quizIcon = document.getElementById('quizIcon');
+const quizQCount = document.getElementById('quizQCount');
+const quizQuestion = document.getElementById('quizQuestion');
+const quizChoices = document.getElementById('quizChoices');
+const quizFeedback = document.getElementById('quizFeedback');
+
+function showOverlay(el){ el.classList.remove('hidden'); }
+function hideOverlay(el){ el.classList.add('hidden'); }
+function hideAllOverlays(){
+  [startOverlay,levelIntroOverlay,quizOverlay,levelPassOverlay,gameOverOverlay,victoryOverlay,pauseOverlay]
+    .forEach(hideOverlay);
+}
+
+/* level chips on start screen */
+const chipsWrap = document.getElementById('levelChipsStart');
+function renderChips(){
+  chipsWrap.innerHTML = '';
+  for(let i=0;i<LEVELS.length;i++){
+    const c = document.createElement('div');
+    c.className = 'levelChip' + (i<currentLevel?' done':'') + (i===currentLevel?' current':'');
+    c.textContent = i+1;
+    chipsWrap.appendChild(c);
+  }
+}
+renderChips();
+
+/* ======================= INPUT ======================= */
+function laneSwitch(dir){
+  if(state!==STATE.PLAYING) return;
+  const idx = player.lane + dir;
+  if(idx>=-1 && idx<=1){
+    player.lane = idx;
+    player.laneFromX = player.laneX; // start from wherever it currently is (even mid-tween)
+    player.laneToX = laneScreenX(idx, 0);
+    player.laneTweenT = 0;
+  }
+}
+function doJump(){
+  if(state!==STATE.PLAYING) return;
+  if(!player.jumping && !player.sliding){
+    player.jumping = true;
+    player.vy = JUMP_V;
+  }
+}
+function doSlide(){
+  if(state!==STATE.PLAYING) return;
+  if(!player.jumping && !player.sliding){
+    player.sliding = true;
+    player.slideTimer = 0.55;
+  }
+}
+
+window.addEventListener('keydown', (e)=>{
+  switch(e.key){
+    case 'ArrowLeft': case 'a': case 'A': laneSwitch(-1); break;
+    case 'ArrowRight': case 'd': case 'D': laneSwitch(1); break;
+    case 'ArrowUp': case 'w': case 'W': case ' ': doJump(); e.preventDefault(); break;
+    case 'ArrowDown': case 's': case 'S': doSlide(); break;
+    case 'p': case 'P': togglePause(); break;
+  }
+});
+
+/* touch swipe */
+let touchStartX=0, touchStartY=0, touchActive=false;
+canvas.addEventListener('touchstart', (e)=>{
+  const t = e.changedTouches[0];
+  touchStartX=t.clientX; touchStartY=t.clientY; touchActive=true;
+},{passive:true});
+canvas.addEventListener('touchend', (e)=>{
+  if(!touchActive) return;
+  touchActive=false;
+  const t = e.changedTouches[0];
+  const dx = t.clientX-touchStartX, dy = t.clientY-touchStartY;
+  if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>30){
+    laneSwitch(dx>0?1:-1);
+  } else if(Math.abs(dy)>30){
+    if(dy<0) doJump(); else doSlide();
+  }
+},{passive:true});
+
+/* mobile buttons */
+document.getElementById('btnLeft').addEventListener('touchstart',(e)=>{e.preventDefault();laneSwitch(-1);});
+document.getElementById('btnRight').addEventListener('touchstart',(e)=>{e.preventDefault();laneSwitch(1);});
+document.getElementById('btnUp').addEventListener('touchstart',(e)=>{e.preventDefault();doJump();});
+document.getElementById('btnDown').addEventListener('touchstart',(e)=>{e.preventDefault();doSlide();});
+document.getElementById('btnLeft').addEventListener('click',()=>laneSwitch(-1));
+document.getElementById('btnRight').addEventListener('click',()=>laneSwitch(1));
+document.getElementById('btnUp').addEventListener('click',()=>doJump());
+document.getElementById('btnDown').addEventListener('click',()=>doSlide());
+
+function isTouchDevice(){ return ('ontouchstart' in window) || navigator.maxTouchPoints>0; }
+if(isTouchDevice()) document.getElementById('mobileControls').classList.add('show');
+
+/* ======================= GEOMETRY / PERSPECTIVE ======================= */
+function horizonY(){ return H*0.34; }
+function groundY(){ return H*0.90; }
+function roadHalfWidth(z){ // z: 0 near player, 1 far horizon
+  const near = W*0.46, far = W*0.09;
+  return near + (far-near)*z;
+}
+function roadY(z){
+  return groundY() + (horizonY()-groundY())*z;
+}
+function scaleAt(z){
+  return 1 + (0.16-1)*z;
+}
+const LANE_FRAC = 2/3; // lane centers sit at +/- (2/3) of the road half-width; matches drawRoad's divider math exactly
+function laneScreenX(laneIdx, z){
+  const hw = roadHalfWidth(z);
+  return W/2 + laneIdx*hw*LANE_FRAC;
+}
+
+/* ======================= LEVEL FLOW ======================= */
+function goToStart(){
+  state = STATE.START;
+  hideAllOverlays();
+  renderChips();
+  showOverlay(startOverlay);
+}
+
+function startLevel(idx){
+  currentLevel = idx;
+  const lv = LEVELS[idx];
+  // Difficulty grows a little each full loop through all 6 sectors, capped so it
+  // never becomes unfair — this is what makes the endless mode get harder over time.
+  diffMult = 1 + Math.min(cycle * 0.10, 0.5);
+  baseSpeed = lv.speed * diffMult; speed = baseSpeed;
+  progress = 0; dist=0;
+  lives = 3;
+  obstacles = []; coins = []; particles=[];
+  player.lane=0; player.y=0; player.vy=0; player.jumping=false; player.sliding=false; player.slideTimer=0; player.invuln=1.0;
+  player.laneX = laneScreenX(0,0); player.laneFromX = player.laneX; player.laneToX = player.laneX; player.laneTweenT = 1;
+  spawnTimer = 0; coinSpawnTimer = 0.3;
+  updateHUD();
+  levelIntroTitle.textContent = `Level ${idx+1}: ${lv.name}`;
+  levelIntroDesc.textContent = lv.desc;
+  hideAllOverlays();
+  showOverlay(levelIntroOverlay);
+  state = STATE.LEVEL_INTRO;
+}
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  score = 0; cycle = 0;
+  startLevel(0);
+});
+
+document.getElementById('levelIntroBtn').addEventListener('click', ()=>{
+  hideAllOverlays();
+  state = STATE.PLAYING;
+  lastTime = performance.now();
+});
+
+// Endless mode: dying ends the current run, so Retry starts a brand new run from
+// the beginning (score, sector, and difficulty all reset) — same as Subway Surfers.
+document.getElementById('retryBtn').addEventListener('click', ()=>{
+  score = 0; cycle = 0;
+  startLevel(0);
+});
+
+// Continue always has somewhere to go: the next sector, or back to sector 1 with
+// the difficulty bumped up if the player just finished a full loop.
+document.getElementById('nextLevelBtn').addEventListener('click', ()=>{
+  startLevel(pendingNextLevel);
+});
+
+document.getElementById('playAgainBtn').addEventListener('click', ()=>{
+  score = 0; cycle = 0;
+  startLevel(0);
+});
+
+/* pause */
+const pauseBtn = document.getElementById('pauseBtn');
+pauseBtn.addEventListener('click', togglePause);
+document.getElementById('resumeBtn').addEventListener('click', togglePause);
+function togglePause(){
+  if(state===STATE.PAUSED){
+    hideOverlay(pauseOverlay);
+    state = prevStateBeforePause;
+    lastTime = performance.now();
+  } else if(state===STATE.PLAYING){
+    prevStateBeforePause = state;
+    state = STATE.PAUSED;
+    showOverlay(pauseOverlay);
+  }
+}
+
+function triggerGameOver(){
+  state = STATE.GAMEOVER;
+  finalScoreEl.textContent = score;
+  hideAllOverlays();
+  showOverlay(gameOverOverlay);
+  try{
+    window.parent.postMessage({ type: "CYBER_GUARDIAN_GAMEOVER", score, level: currentLevel + 1 }, "*");
+  }catch(e){}
+}
+
+function reachGoal(){
+  state = STATE.QUIZ;
+  quizIndex = 0; quizCorrectCount = 0;
+  hideAllOverlays();
+  openQuizQuestion();
+}
+
+/* ======================= QUIZ ======================= */
+let quizIndex = 0;
+let quizCorrectCount = 0;
+
+function openQuizQuestion(){
+  const lv = LEVELS[currentLevel];
+  const total = lv.quiz.length;
+  quizIcon.textContent = lv.quizIcon;
+  quizQCount.textContent = `${lv.quizTopic} — Question ${quizIndex+1} of ${total}`;
+  const item = lv.quiz[quizIndex];
+  quizQuestion.textContent = item.q;
+  quizFeedback.textContent = '';
+  quizFeedback.className = '';
+  quizChoices.innerHTML = '';
+  item.choices.forEach((choiceText, i)=>{
+    const b = document.createElement('button');
+    b.className = 'choiceBtn';
+    b.textContent = choiceText;
+    b.addEventListener('click', ()=> handleChoice(i, b));
+    quizChoices.appendChild(b);
+  });
+  showOverlay(quizOverlay);
+}
+
+function handleChoice(i, btnEl){
+  const lv = LEVELS[currentLevel];
+  const item = lv.quiz[quizIndex];
+  const buttons = Array.from(quizChoices.children);
+  if(i===item.a){
+    btnEl.classList.add('correct');
+    quizFeedback.textContent = '✅ Correct! Sector secured.' + (item.tip ? ' ' + item.tip : '');
+    quizFeedback.className = 'good';
+    buttons.forEach(b=>b.disabled=true);
+    score += 50;
+    updateHUD();
+    setTimeout(()=>{
+      quizIndex++;
+      if(quizIndex >= lv.quiz.length){
+        finishQuiz();
+      } else {
+        openQuizQuestion();
+      }
+    }, item.tip ? 2200 : 900);
+  } else {
+    btnEl.classList.add('wrong');
+    btnEl.disabled = true;
+    quizFeedback.textContent = '❌ Not quite — try another answer.';
+    quizFeedback.className = 'bad';
+  }
+}
+
+function finishQuiz(){
+  hideOverlay(quizOverlay);
+  const next = currentLevel + 1;
+  if(next >= LEVELS.length){
+    // Completed a full lap of all 6 sectors — loop back to sector 1 endlessly,
+    // with difficulty stepped up a notch (see startLevel's diffMult).
+    cycle++;
+    pendingNextLevel = 0;
+    state = STATE.LEVEL_PASS;
+    levelPassDesc.textContent = `Loop ${cycle} complete! Every sector is secure — the network throws a tougher wave now. Back to "${LEVELS[0].name}".`;
+    showOverlay(levelPassOverlay);
+    try{
+      window.parent.postMessage({ type: "CYBER_GUARDIAN_LOOP_COMPLETE", score, cycle }, "*");
+    }catch(e){}
+  } else {
+    pendingNextLevel = next;
+    state = STATE.LEVEL_PASS;
+    levelPassDesc.textContent = `Sector "${LEVELS[currentLevel].name}" is secure. Next up: ${LEVELS[next].name}.`;
+    showOverlay(levelPassOverlay);
+    try{
+      window.parent.postMessage({ type: "CYBER_GUARDIAN_LEVEL_PASS", score, level: currentLevel + 1 }, "*");
+    }catch(e){}
+  }
+}
+
+/* ======================= SPAWNING ======================= */
+// Obstacles spawn a bit further out (z:1.15 instead of right at the horizon) so
+// there's extra time to read which lane(s) are blocked before a reaction is needed.
+const SPAWN_Z = 1.15;
+function spawnObstacleRow(){
+  const numBlocked = (Math.random() < 0.20 + currentLevel*0.03) ? 2 : 1;
+  const lanesShuffled = [-1,0,1].sort(()=>Math.random()-0.5);
+  const blockedLanes = lanesShuffled.slice(0, numBlocked);
+  const types = ['barrel','lowbar','wall'];
+  blockedLanes.forEach(lane=>{
+    const type = types[Math.floor(Math.random()*types.length)];
+    obstacles.push({lane, z:SPAWN_Z, type, hit:false, passed:false});
+  });
+  const openLanes = [-1,0,1].filter(l=>!blockedLanes.includes(l));
+  if(openLanes.length){
+    const lane = openLanes[Math.floor(Math.random()*openLanes.length)];
+    for(let k=0;k<3;k++){
+      coins.push({lane, z:SPAWN_Z + k*0.045, taken:false, phase:Math.random()*6.28});
+    }
+  }
+}
+
+/* ======================= PARTICLES ======================= */
+function spawnBurst(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const ang = Math.random()*Math.PI*2;
+    const spd = 60+Math.random()*140;
+    particles.push({x,y,vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd - 60, life:0.5+Math.random()*0.3, maxLife:0.8, color});
+  }
+}
+
+/* ======================= UPDATE ======================= */
+let lastTime = performance.now();
+function updateHUD(){
+  hudLevel.textContent = currentLevel+1;
+  hudLap.textContent = cycle>0 ? ` • Lap ${cycle+1}` : '';
+  hudScore.textContent = score;
+  heartsPill.innerHTML = '❤️'.repeat(Math.max(0,lives)) + '🖤'.repeat(Math.max(0,3-lives));
+  const pct = Math.min(100, (progress/LEVELS[currentLevel].goal)*100);
+  levelProgressBar.style.width = pct+'%';
+}
+
+function update(dt){
+  if(state!==STATE.PLAYING) return;
+
+  const lv = LEVELS[currentLevel];
+  // Softer in-sector speed ramp (was +3 max, now +2, and ramps slower) — keeps the
+  // run from suddenly outrunning the player's reaction time the longer a sector goes.
+  speed = baseSpeed + Math.min(2, dist/700);
+
+  dist += speed*dt*20;
+  progress += speed*dt*20;
+
+  if(player.jumping){
+    player.y += player.vy*dt;
+    player.vy += GRAVITY*dt;
+    if(player.y>=0){ player.y=0; player.jumping=false; player.vy=0; }
+  }
+  if(player.sliding){
+    player.slideTimer -= dt;
+    if(player.slideTimer<=0){ player.sliding=false; }
+  }
+  player.runPhase += dt*(player.jumping?4:10);
+  if(player.invuln>0) player.invuln -= dt;
+
+  // deterministic, fixed-duration lane tween: the rendered position always converges
+  // to the logical lane within LANE_TWEEN_DURATION, so what you see matches what the
+  // game checks for collisions instead of drifting behind it.
+  if(player.laneTweenT < 1){
+    player.laneTweenT = Math.min(1, player.laneTweenT + dt/LANE_TWEEN_DURATION);
+    const e = 1 - Math.pow(1-player.laneTweenT, 3); // easeOutCubic
+    player.laneX = player.laneFromX + (player.laneToX - player.laneFromX) * e;
+  } else {
+    player.laneX = laneScreenX(player.lane, 0);
+  }
+
+  spawnTimer -= dt;
+  if(spawnTimer<=0){
+    spawnObstacleRow();
+    // Scale the spawn gap with current speed (and never let it drop below a safe
+    // floor) so obstacle rows stay a consistent *distance* apart instead of bunching
+    // up the faster the run gets — this is the main fix for "unpredictable" spacing.
+    const MIN_SPAWN_GAP = 0.85;
+    spawnTimer = Math.max(MIN_SPAWN_GAP, (lv.spawnEvery/diffMult) * (speed/baseSpeed)) + Math.random()*0.25;
+  }
+
+  const zSpeed = dt * (0.16 + speed*0.012);
+
+  // Collision window is expressed in the same z-space used to render the obstacle,
+  // tuned so the hit registers right as the obstacle visually reaches the player's
+  // feet (groundY) rather than while it's still floating above/behind that point.
+  const COLLISION_Z_MIN = -0.02;
+  const COLLISION_Z_MAX = 0.10;
+
+  for(const o of obstacles){
+    o.z -= zSpeed;
+    if(!o.hit && !o.passed && o.z<COLLISION_Z_MAX && o.z>COLLISION_Z_MIN && o.lane===player.lane && player.invuln<=0){
+      const dodged = (o.type==='barrel' && player.jumping) || (o.type==='lowbar' && player.sliding);
+      if(!dodged){
+        o.hit = true;
+        loseLife();
+      }
+    }
+    if(o.z<-0.05) o.passed = true;
+  }
+  obstacles = obstacles.filter(o=>o.z>-0.1);
+
+  for(const c of coins){
+    c.z -= zSpeed;
+    c.phase += dt*6;
+    if(!c.taken && c.z<COLLISION_Z_MAX && c.z>COLLISION_Z_MIN && c.lane===player.lane){
+      c.taken = true;
+      score += 10;
+      const sx = laneScreenX(c.lane,0), sy = groundY()-40;
+      spawnBurst(sx, sy, '#ffd23f', 10);
+      updateHUD();
+    }
+  }
+  coins = coins.filter(c=>c.z>-0.1);
+
+  for(const p of particles){
+    p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 500*dt; p.life -= dt;
+  }
+  particles = particles.filter(p=>p.life>0);
+
+  updateHUD();
+
+  if(progress >= lv.goal){
+    reachGoal();
+  }
+}
+
+function loseLife(){
+  lives -= 1;
+  player.invuln = 1.1;
+  flashEl.style.transition='none'; flashEl.style.opacity='1';
+  requestAnimationFrame(()=>{ flashEl.style.transition='opacity .4s ease'; flashEl.style.opacity='0'; });
+  const sx = laneScreenX(player.lane,0), sy=groundY()-40;
+  spawnBurst(sx,sy,'#ff5a5f',16);
+  updateHUD();
+  if(lives<=0){
+    setTimeout(triggerGameOver, 250);
+  }
+}
+
+/* ======================= DRAWING ======================= */
+function drawBackground(t){
+  const hy = horizonY();
+  const sky = ctx.createLinearGradient(0,0,0,hy+40);
+  sky.addColorStop(0, '#4fb8ea');
+  sky.addColorStop(1, '#c9edff');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,hy+40);
+
+  ctx.save();
+  const sx = W*0.82, sy = hy*0.4;
+  const sunGlow = ctx.createRadialGradient(sx,sy,5,sx,sy,70);
+  sunGlow.addColorStop(0,'rgba(255,230,102,0.9)');
+  sunGlow.addColorStop(1,'rgba(255,230,102,0)');
+  ctx.fillStyle = sunGlow;
+  ctx.beginPath(); ctx.arc(sx,sy,70,0,7); ctx.fill();
+  ctx.fillStyle = '#ffe066';
+  ctx.beginPath(); ctx.arc(sx,sy,26,0,7); ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for(let i=0;i<4;i++){
+    const cx = ((t*10 + i*260) % (W+200)) - 100;
+    const cy = hy*0.25 + i*18;
+    drawCloud(cx,cy,0.6+i*0.08);
+  }
+
+  ctx.fillStyle = '#7aa6d9';
+  for(let i=0;i<9;i++){
+    const bx = ((t*28 + i*90) % (W+180)) - 90;
+    const bh = 30+((i*37)%50);
+    ctx.fillRect(bx, hy-bh, 46, bh);
+    ctx.fillStyle = 'rgba(255,244,180,0.85)';
+    for(let wx=0; wx<3; wx++) for(let wy=0; wy<Math.floor(bh/14); wy++){
+      if((wx+wy+i)%3===0) ctx.fillRect(bx+6+wx*13, hy-bh+6+wy*14, 5,7);
+    }
+    ctx.fillStyle = '#7aa6d9';
+  }
+
+  const grassGrad = ctx.createLinearGradient(0,hy,0,groundY()+60);
+  grassGrad.addColorStop(0,'#6cc96c');
+  grassGrad.addColorStop(1,'#3f9a4a');
+  ctx.fillStyle = grassGrad;
+  ctx.fillRect(0,hy,W,H-hy);
+}
+
+function drawCloud(x,y,s){
+  ctx.beginPath();
+  ctx.ellipse(x,y,26*s,14*s,0,0,7);
+  ctx.ellipse(x+18*s,y+4*s,20*s,12*s,0,0,7);
+  ctx.ellipse(x-18*s,y+5*s,18*s,11*s,0,0,7);
+  ctx.fill();
+}
+
+function drawRoad(t){
+  const hy = horizonY(), gy = groundY();
+  const topHW = roadHalfWidth(1), botHW = roadHalfWidth(0);
+  ctx.beginPath();
+  ctx.moveTo(W/2-topHW, hy);
+  ctx.lineTo(W/2+topHW, hy);
+  ctx.lineTo(W/2+botHW, gy);
+  ctx.lineTo(W/2-botHW, gy);
+  ctx.closePath();
+  const roadGrad = ctx.createLinearGradient(0,hy,0,gy);
+  roadGrad.addColorStop(0,'#9c8874');
+  roadGrad.addColorStop(1,'#7a6650');
+  ctx.fillStyle = roadGrad;
+  ctx.fill();
+
+  // Highlight the player's current lane as a soft glowing column from horizon to feet.
+  // This gives a constant visual reference for "my lane" so an approaching obstacle's
+  // final position is easy to predict well before it reaches the player.
+  const laneBoundaryFrac = LANE_FRAC/2;
+  const laneTopL = W/2 + (player.lane-laneBoundaryFrac)*topHW;
+  const laneTopR = W/2 + (player.lane+laneBoundaryFrac)*topHW;
+  const laneBotL = W/2 + (player.lane-laneBoundaryFrac)*botHW;
+  const laneBotR = W/2 + (player.lane+laneBoundaryFrac)*botHW;
+  ctx.beginPath();
+  ctx.moveTo(laneTopL,hy); ctx.lineTo(laneTopR,hy);
+  ctx.lineTo(laneBotR,gy); ctx.lineTo(laneBotL,gy);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,221,85,0.14)';
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(W/2-topHW, hy); ctx.lineTo(W/2-botHW, gy);
+  ctx.moveTo(W/2+topHW, hy); ctx.lineTo(W/2+botHW, gy);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(120,220,255,0.85)';
+  const dashOffset = (t*220) % 40;
+  const LANE_BOUNDARY_FRAC = LANE_FRAC/2; // boundary sits exactly halfway between two lane centers
+  for(const edge of [-LANE_BOUNDARY_FRAC, LANE_BOUNDARY_FRAC]){
+    ctx.beginPath();
+    ctx.setLineDash([16,14]);
+    ctx.lineDashOffset = -dashOffset;
+    ctx.lineWidth=3;
+    const topX = W/2 + edge*topHW;
+    const botX = W/2 + edge*botHW;
+    ctx.moveTo(topX,hy); ctx.lineTo(botX,gy);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawObstacle(o){
+  const sx = laneScreenX(o.lane, o.z);
+  const sy = roadY(o.z);
+  const sc = scaleAt(o.z);
+  ctx.save();
+  ctx.translate(sx,sy);
+  ctx.scale(sc,sc);
+  if(o.type==='barrel'){
+    ctx.fillStyle = '#e05a3a';
+    roundRect(-24,-60,48,60,8); ctx.fill();
+    ctx.fillStyle='#ffcf6b';
+    roundRect(-24,-46,48,10,3); ctx.fill();
+    roundRect(-24,-26,48,10,3); ctx.fill();
+    ctx.fillStyle='#3a1414';
+    ctx.beginPath(); ctx.ellipse(0,-32,9,11,0,0,7); ctx.fill();
+    ctx.strokeStyle='#3a1414'; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(-9,-32); ctx.lineTo(-18,-40);
+    ctx.moveTo(-9,-28); ctx.lineTo(-19,-28);
+    ctx.moveTo(-9,-24); ctx.lineTo(-18,-18);
+    ctx.moveTo(9,-32); ctx.lineTo(18,-40);
+    ctx.moveTo(9,-28); ctx.lineTo(19,-28);
+    ctx.moveTo(9,-24); ctx.lineTo(18,-18);
+    ctx.stroke();
+  } else if(o.type==='lowbar'){
+    ctx.fillStyle = '#f2b400';
+    roundRect(-46,-92,92,16,4); ctx.fill();
+    ctx.fillStyle='#3a2c00';
+    for(let i=-40;i<40;i+=14){ ctx.fillRect(i,-92,7,16); }
+    ctx.fillStyle='#8a6d1f';
+    ctx.fillRect(-46,-92,8,92);
+    ctx.fillRect(38,-92,8,92);
+  } else if(o.type==='wall'){
+    const g = ctx.createLinearGradient(-30,-100,30,0);
+    g.addColorStop(0,'#ff8a7a'); g.addColorStop(1,'#e2392f');
+    ctx.fillStyle = g;
+    roundRect(-32,-100,64,100,10); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=3;
+    roundRectStroke(-32,-100,64,100,10);
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.font='bold 22px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('⛔', 0, -45);
+  }
+  ctx.restore();
+}
+
+function drawCoin(c){
+  const sx = laneScreenX(c.lane, c.z);
+  const sy = roadY(c.z) - 30*scaleAt(c.z);
+  const sc = scaleAt(c.z);
+  const bob = Math.sin(c.phase)*3;
+  ctx.save();
+  ctx.translate(sx, sy+bob);
+  ctx.scale(sc,sc);
+  const spin = Math.abs(Math.sin(c.phase*0.6));
+  ctx.scale(0.4+spin*0.6,1);
+  const g = ctx.createRadialGradient(0,0,2,0,0,16);
+  g.addColorStop(0,'#fff6cf'); g.addColorStop(1,'#ffcc33');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0,0,14,0,7); ctx.fill();
+  ctx.strokeStyle='#e0a500'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#e0a500';
+  ctx.font='bold 14px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('¢', 0, 1);
+  ctx.restore();
+}
+
+function drawPlayer(){
+  const sx = player.laneX;
+  const sy = groundY() + player.y;
+  const squish = player.sliding ? 0.55 : 1;
+  const bounce = player.jumping ? 0 : Math.sin(player.runPhase)*4;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+  if(player.invuln>0 && Math.floor(player.invuln*10)%2===0){ ctx.globalAlpha = 0.4; }
+
+  ctx.save();
+  ctx.globalAlpha *= 0.35;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(0, 4, 26, 7, 0, 0, 7);
+  ctx.fill();
+  ctx.restore();
+
+  const bodyH = 66*squish;
+  ctx.translate(0, -bodyH/2 - 4 + bounce*0.3);
+
+  const legSwing = player.jumping? 10 : Math.sin(player.runPhase)*14;
+  ctx.fillStyle = '#274b8f';
+  roundRect(-16, bodyH/2-6, 12, 22+Math.abs(legSwing)*0.3, 6); ctx.fill();
+  roundRect(4, bodyH/2-6, 12, 22-Math.abs(legSwing)*0.3, 6); ctx.fill();
+
+  const capeGrad = ctx.createLinearGradient(0,-bodyH/2,0,bodyH/2);
+  capeGrad.addColorStop(0,'rgba(46,196,240,0.55)');
+  capeGrad.addColorStop(1,'rgba(46,196,240,0)');
+  ctx.fillStyle = capeGrad;
+  ctx.beginPath();
+  ctx.moveTo(-18,-bodyH/2+6);
+  ctx.quadraticCurveTo(-34, bodyH/2, -10, bodyH/2+6);
+  ctx.lineTo(10,-bodyH/2+10);
+  ctx.closePath();
+  ctx.fill();
+
+  const torsoGrad = ctx.createLinearGradient(-20,-bodyH/2,20,bodyH/2);
+  torsoGrad.addColorStop(0,'#37c6f2');
+  torsoGrad.addColorStop(1,'#1a8fb8');
+  ctx.fillStyle = torsoGrad;
+  roundRect(-20,-bodyH/2,40,bodyH*0.62,14); ctx.fill();
+
+  ctx.fillStyle = '#ffdd55';
+  ctx.beginPath();
+  ctx.moveTo(0,-bodyH/2+10);
+  ctx.lineTo(8,-bodyH/2+16);
+  ctx.lineTo(8,-bodyH/2+26);
+  ctx.quadraticCurveTo(0,-bodyH/2+34,0,-bodyH/2+34);
+  ctx.quadraticCurveTo(0,-bodyH/2+34,-8,-bodyH/2+26);
+  ctx.lineTo(-8,-bodyH/2+16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#ff8a3d';
+  const armSwing = player.jumping? -18 : Math.sin(player.runPhase+3.14)*16;
+  roundRect(-28, -bodyH/2+6+armSwing*0.2, 9, 26, 5); ctx.fill();
+  roundRect(19, -bodyH/2+6-armSwing*0.2, 9, 26, 5); ctx.fill();
+
+  ctx.fillStyle = '#ffd9b3';
+  ctx.beginPath(); ctx.arc(0,-bodyH/2-10,15,0,7); ctx.fill();
+  ctx.fillStyle = '#1a8fb8';
+  ctx.beginPath(); ctx.arc(0,-bodyH/2-12,15,Math.PI,0); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  roundRect(-11,-bodyH/2-16,22,7,3); ctx.fill();
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function roundRectStroke(x,y,w,h,r){
+  roundRect(x,y,w,h,r);
+  ctx.stroke();
+}
+
+function drawParticles(){
+  for(const p of particles){
+    ctx.globalAlpha = Math.max(0, p.life/p.maxLife);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function render(t){
+  ctx.clearRect(0,0,W,H);
+  drawBackground(t);
+  drawRoad(t);
+
+  const drawables = [];
+  for(const o of obstacles) drawables.push({z:o.z, draw:()=>drawObstacle(o)});
+  for(const c of coins) if(!c.taken) drawables.push({z:c.z, draw:()=>drawCoin(c)});
+  drawables.sort((a,b)=>b.z-a.z);
+  for(const d of drawables) d.draw();
+
+  drawPlayer();
+  drawParticles();
+}
+
+/* ======================= MAIN LOOP ======================= */
+function loop(now){
+  const dt = Math.min(0.033, (now-lastTime)/1000);
+  lastTime = now;
+  update(dt);
+  render(now/1000);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+player.laneX = laneScreenX(0,0);
+player.laneFromX = player.laneX;
+player.laneToX = player.laneX;
+player.laneTweenT = 1;
+
+})();
+</script>
+</body>
+</html>
