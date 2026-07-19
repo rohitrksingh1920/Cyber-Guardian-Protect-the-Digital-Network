@@ -28,14 +28,11 @@ export default function Settings() {
   const { user, refreshUser, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Profile
   const [avatar, setAvatar] = useState(user?.avatar || "🛡️");
   const [schoolCode, setSchoolCode] = useState(user?.school_code || "");
   const [showOnBoard, setShowOnBoard] = useState(
     user?.show_on_leaderboard ?? true,
   );
-
-  // Gameplay preferences (stored in localStorage — not sent to backend)
   const [soundFX, setSoundFX] = useState(
     () => localStorage.getItem("cg-sfx") !== "false",
   );
@@ -45,7 +42,6 @@ export default function Settings() {
   const [dailyTips, setDailyTips] = useState(
     () => localStorage.getItem("cg-tips") !== "false",
   );
-
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [resetConfirm, setResetConfirm] = useState(false);
@@ -60,7 +56,6 @@ export default function Settings() {
 
   const save = async () => {
     setSaving(true);
-    // Save gameplay prefs to localStorage
     localStorage.setItem("cg-sfx", String(soundFX));
     localStorage.setItem("cg-anim", String(animations));
     localStorage.setItem("cg-tips", String(dailyTips));
@@ -81,6 +76,7 @@ export default function Settings() {
 
   if (!user) return null;
 
+  // ── FIX: 'none' as a string, not undefined variable ──
   const Toggle = ({ value, onChange, color = "var(--accent)" }) => (
     <div
       onClick={() => onChange(!value)}
@@ -92,7 +88,7 @@ export default function Settings() {
         cursor: "pointer",
         position: "relative",
         transition: "background .25s",
-        boxShadow: value ? `0 0 12px ${color}50` : none,
+        boxShadow: value ? `0 0 12px ${color}80` : "none", // ← WAS: none (undefined)
         flexShrink: 0,
       }}
     >
@@ -157,6 +153,7 @@ export default function Settings() {
     padding: "20px 24px",
     marginBottom: 16,
   };
+
   const TABS = [
     { id: "profile", label: "👤 Profile" },
     { id: "gameplay", label: "🎮 Gameplay" },
@@ -217,10 +214,9 @@ export default function Settings() {
           ))}
         </div>
 
-        {/* ── PROFILE TAB ──────────────────────────── */}
+        {/* ── PROFILE TAB ── */}
         {activeTab === "profile" && (
           <>
-            {/* Current profile preview */}
             <div
               style={{
                 ...cardStyle,
@@ -285,7 +281,6 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Avatar grid */}
             <div style={cardStyle}>
               <div className="section-label">CHOOSE AVATAR</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
@@ -314,13 +309,9 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Username (display only) */}
             <div style={cardStyle}>
               <div className="section-label">ACCOUNT INFO</div>
-              <Row
-                label="Username"
-                sub="Your public agent codename — contact support to change"
-              >
+              <Row label="Username" sub="Your public agent codename">
                 <span
                   style={{
                     fontFamily: "var(--font-head)",
@@ -336,22 +327,11 @@ export default function Settings() {
                   {user.email}
                 </span>
               </Row>
-              <Row
-                label="Member Since"
-                sub="When you joined the Cyber Guardian force"
-              >
-                <span style={{ fontSize: 13, color: "var(--text-dim)" }}>
-                  {new Date(user.created_at || Date.now()).toLocaleDateString(
-                    "en-IN",
-                    { day: "numeric", month: "short", year: "numeric" },
-                  )}
-                </span>
-              </Row>
             </div>
           </>
         )}
 
-        {/* ── GAMEPLAY TAB ─────────────────────────── */}
+        {/* ── GAMEPLAY TAB ── */}
         {activeTab === "gameplay" && (
           <div style={cardStyle}>
             <div className="section-label">GAMEPLAY PREFERENCES</div>
@@ -403,7 +383,7 @@ export default function Settings() {
           </div>
         )}
 
-        {/* ── STATISTICS TAB ───────────────────────── */}
+        {/* ── STATISTICS TAB ── */}
         {activeTab === "stats" && (
           <>
             <div style={{ ...cardStyle, marginBottom: 16 }}>
@@ -514,7 +494,7 @@ export default function Settings() {
           </>
         )}
 
-        {/* ── PRIVACY TAB ──────────────────────────── */}
+        {/* ── PRIVACY TAB ── */}
         {activeTab === "privacy" && (
           <div style={cardStyle}>
             <div className="section-label">PRIVACY & COMMUNITY</div>
@@ -578,7 +558,7 @@ export default function Settings() {
           </div>
         )}
 
-        {/* ── DANGER ZONE TAB ──────────────────────── */}
+        {/* ── DANGER ZONE TAB ── */}
         {activeTab === "danger" && (
           <div style={{ ...cardStyle, borderColor: "rgba(255,23,68,.3)" }}>
             <div className="section-label" style={{ color: "var(--red)" }}>
@@ -655,7 +635,7 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Save button (shown on all tabs except danger) */}
+        {/* Save button */}
         {activeTab !== "danger" && (
           <button
             onClick={save}
