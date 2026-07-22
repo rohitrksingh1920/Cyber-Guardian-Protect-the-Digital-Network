@@ -1,22 +1,21 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Topbar from "../../components/Topbar";
 import ResultModal from "../../components/ResultModal";
+import SystemBreach from "../../components/SystemBreach";
 import api from "../../services/api";
+import { markLevelPassed, markLevelFailed, isLevelUnlocked } from "./LevelGate";
 
-// Mixed cipher types — each puzzle is a different encryption concept
 const PUZZLES = [
   {
     type: "CAESAR",
     typeColor: "#e040fb",
     typeDesc: "Caesar Cipher — Shift 3",
-    story:
-      "Enemy communication intercepted. Decrypt to reveal the attack keyword.",
+    story: "Enemy communication intercepted. Decrypt the attack keyword.",
     cipher: "KHOOR",
     answer: "HELLO",
-    hint: "Each letter is shifted forward by 3. K→H, H→E, O→L, O→L, R→O",
-    fact: "Julius Caesar used this cipher to communicate with generals around 58 BC. Shift 3 was his favourite key.",
-    showWheel: true,
-    shift: 3,
+    hint: "K→H, H→E, O→L, O→L, R→O (shift each letter back by 3)",
+    fact: "Julius Caesar used this cipher ~58 BC. Shift 3 was his favourite key.",
   },
   {
     type: "ROT13",
@@ -25,10 +24,8 @@ const PUZZLES = [
     story: "Hacker forum post decoded. What threat is being planned?",
     cipher: "ZNYJNER",
     answer: "MALWARE",
-    hint: "ROT13 shifts each letter by 13. A→N, B→O, M→Z, A→N, L→Y…",
-    fact: "ROT13 is a special case of Caesar cipher where shift=13. Applying ROT13 twice returns the original text — it is self-reversing.",
-    showWheel: false,
-    rot13map: true,
+    hint: "ROT13 shifts each letter by 13. M→Z, A→N, L→Y, W→J, A→N, R→E, E→R",
+    fact: "ROT13 is self-reversing — applying it twice gives back the original text.",
   },
   {
     type: "MORSE",
@@ -38,345 +35,156 @@ const PUZZLES = [
     cipher: ".... .- -.-. -.-",
     answer: "HACK",
     hint: "H=...., A=.-, C=-.-., K=-.-, each letter separated by space",
-    fact: "Morse code was invented in 1837 by Samuel Morse. It was used in WW2 for encrypted military communications.",
-    showWheel: false,
-    morseRef: true,
+    fact: "Morse code was invented in 1837 by Samuel Morse and used in WW2 military communications.",
   },
   {
     type: "REVERSE",
     typeColor: "#ffd600",
     typeDesc: "Reverse Cipher",
     story: "Classified document recovered. The text is written backwards.",
-    cipher: "LLAWERIFSYBEREC",
-    answer: "CYBERFIREWALL",
-    hint: "Simply reverse the string — read it from right to left.",
-    fact: "Reverse cipher is a transposition cipher — it rearranges characters rather than substituting them.",
-    showWheel: false,
+    cipher: "LLAWERIFC",
+    answer: "CFIREWALL",
+    hint: "Simply reverse the string — read it from right to left",
+    fact: "Reverse cipher is a transposition cipher — it rearranges rather than substitutes characters.",
   },
   {
     type: "CAESAR",
     typeColor: "#e040fb",
     typeDesc: "Caesar Cipher — Shift 13",
-    story:
-      "Final transmission from a compromised server. Decrypt the emergency command.",
-    cipher: "RAPVYNGR ABQR GUERR",
-    answer: "ISOLATE NODE THREE",
-    hint: "Shift 13 (same as ROT13). I→V, S→F, O→B… each letter back by 13.",
-    fact: "Modern encryption like AES-256 uses 256-bit keys — that's 2^256 possible combinations. The universe would end before brute-forcing it.",
-    showWheel: true,
-    shift: 13,
+    story: "Final transmission from a compromised server. Decrypt the command.",
+    cipher: "VFBYNGR ABQR",
+    answer: "ISOLATE NODE",
+    hint: "Shift 13 (ROT13): V→I, F→S, B→O, L→L, N→A, T→G, R→E, space stays, A→N, B→O, Q→D, R→E",
+    fact: "AES-256 has 2^256 possible keys — brute forcing would take longer than the age of the universe.",
   },
 ];
 
-const MORSE_TABLE = {
-  ".-": "A",
-  "-.-.": "C",
-  "-.": "D",
-  ".": "E",
-  "..-.": "F",
-  "--.": "G",
-  "....": "H",
-  "..": "I",
-  ".---": "J",
-  "-.-": "K",
-  ".-..": "L",
-  "--": "M",
-  "-.": "N",
-  "---": "O",
-  ".--.": "P",
-  "--.-": "Q",
-  ".-.": "R",
-  "...": "S",
-  "-": "T",
-  "..-": "U",
-  "...-": "V",
-  ".--": "W",
-  "-..-": "X",
-  "-.--": "Y",
-  "--..": "Z",
-  ".----": "1",
-  "..---": "2",
-  "...--": "3",
-  "....-": "4",
-  ".....": "5",
-  "-....": "6",
-  "--...": "7",
-  "---..": "8",
-  "----.": "9",
-  "-----": "0",
-};
-
+const PASS_REQ = { correct: 4, total: 5 };
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-function CipherDisplay({ puzzle }) {
-  const lines = puzzle.cipher.includes("\n")
-    ? puzzle.cipher.split("\n")
-    : [puzzle.cipher];
+function CaesarWheel({ shift, color }) {
   return (
-    <div style={{ textAlign: "center" }}>
+    <div style={{ marginTop: 12 }}>
       <div
         style={{
           fontSize: 10,
           color: "var(--text-dim)",
-          letterSpacing: 3,
+          letterSpacing: 2,
+          marginBottom: 6,
           fontFamily: "var(--font-head)",
-          marginBottom: 10,
         }}
       >
-        {puzzle.typeDesc.toUpperCase()}
+        CAESAR WHEEL — SHIFT -{shift} (encrypted → plain)
       </div>
-      {lines.map((line, i) => (
-        <div
-          key={i}
-          style={{
-            fontFamily: "var(--font-head)",
-            fontSize: line.length > 15 ? 22 : line.length > 10 ? 30 : 42,
-            letterSpacing: line.length > 15 ? 3 : 6,
-            color: puzzle.typeColor,
-            textShadow: `0 0 20px ${puzzle.typeColor}60`,
-            marginBottom: 8,
-            wordBreak: "break-all",
-          }}
-        >
-          {line}
-        </div>
-      ))}
-      {/* Letter tiles for short ciphers */}
-      {puzzle.cipher.length <= 10 && !puzzle.cipher.includes(" ") && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 6,
-            flexWrap: "wrap",
-            marginTop: 10,
-          }}
-        >
-          {puzzle.cipher.split("").map((c, i) => (
-            <div key={i} style={{ textAlign: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          gap: 3,
+        }}
+      >
+        {ALPHABET.map((c) => {
+          const enc = String.fromCharCode(
+            ((c.charCodeAt(0) - 65 + shift) % 26) + 65,
+          );
+          return (
+            <div
+              key={c}
+              style={{
+                textAlign: "center",
+                background: "rgba(255,255,255,.03)",
+                border: "1px solid var(--border)",
+                borderRadius: 4,
+                padding: "3px 5px",
+                minWidth: 30,
+              }}
+            >
               <div
                 style={{
-                  width: 36,
-                  height: 36,
-                  background: `${puzzle.typeColor}18`,
-                  border: `1px solid ${puzzle.typeColor}`,
-                  borderRadius: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  fontSize: 11,
+                  color: "var(--text)",
                   fontFamily: "var(--font-head)",
-                  color: puzzle.typeColor,
-                  fontSize: 16,
                 }}
               >
                 {c}
               </div>
-              {puzzle.shift && (
-                <div
-                  style={{
-                    fontSize: 9,
-                    color: "var(--text-dim)",
-                    marginTop: 2,
-                  }}
-                >
-                  -{puzzle.shift}
-                </div>
-              )}
+              <div style={{ fontSize: 10, color }}>{enc}</div>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function ReferencePanel({ puzzle }) {
-  if (puzzle.showWheel) {
-    const shift = puzzle.shift || 3;
-    return (
-      <div style={{ marginTop: 14, animation: "fadeIn .2s ease" }}>
-        <div
-          style={{
-            fontSize: 10,
-            color: "var(--text-dim)",
-            letterSpacing: 2,
-            marginBottom: 6,
-            fontFamily: "var(--font-head)",
-          }}
-        >
-          CAESAR WHEEL — SHIFT -{shift}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            gap: 3,
-          }}
-        >
-          {ALPHABET.map((c) => {
-            const enc = String.fromCharCode(
-              ((c.charCodeAt(0) - 65 + shift) % 26) + 65,
-            );
-            return (
-              <div
-                key={c}
-                style={{
-                  textAlign: "center",
-                  background: "rgba(255,255,255,.03)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 4,
-                  padding: "3px 5px",
-                  minWidth: 30,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "var(--text)",
-                    fontFamily: "var(--font-head)",
-                  }}
-                >
-                  {c}
-                </div>
-                <div style={{ fontSize: 10, color: puzzle.typeColor }}>
-                  {enc}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+function MorseRef({ color }) {
+  const common = [
+    ["A", ".-"],
+    ["C", "-.-."],
+    ["E", "."],
+    ["H", "...."],
+    ["I", ".."],
+    ["K", "-.-"],
+    ["L", ".-.."],
+    ["M", "--"],
+    ["N", "-."],
+    ["O", "---"],
+    ["R", ".-."],
+    ["S", "..."],
+    ["T", "-"],
+    ["W", ".--"],
+  ];
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div
+        style={{
+          fontSize: 10,
+          color: "var(--text-dim)",
+          letterSpacing: 2,
+          marginBottom: 6,
+          fontFamily: "var(--font-head)",
+        }}
+      >
+        MORSE CODE REFERENCE
       </div>
-    );
-  }
-  if (puzzle.morseRef) {
-    const common = [
-      ["A", ".-"],
-      ["B", "-..."],
-      ["C", "-.-."],
-      ["E", "."],
-      ["H", "...."],
-      ["I", ".."],
-      ["K", "-.-"],
-      ["L", ".-.."],
-      ["M", "--"],
-      ["N", "-."],
-      ["O", "---"],
-      ["R", ".-."],
-      ["S", "..."],
-      ["T", "-"],
-      ["W", ".--"],
-    ];
-    return (
-      <div style={{ marginTop: 14 }}>
-        <div
-          style={{
-            fontSize: 10,
-            color: "var(--text-dim)",
-            letterSpacing: 2,
-            marginBottom: 6,
-            fontFamily: "var(--font-head)",
-          }}
-        >
-          MORSE CODE REFERENCE
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {common.map(([letter, code]) => (
-            <div
-              key={letter}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {common.map(([l, c]) => (
+          <div
+            key={l}
+            style={{
+              background: "rgba(255,255,255,.03)",
+              border: "1px solid var(--border)",
+              borderRadius: 4,
+              padding: "3px 8px",
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{ fontFamily: "var(--font-head)", fontSize: 11, color }}
+            >
+              {l}
+            </span>
+            <span
               style={{
-                background: "rgba(255,255,255,.03)",
-                border: "1px solid var(--border)",
-                borderRadius: 4,
-                padding: "3px 8px",
-                display: "flex",
-                gap: 6,
-                alignItems: "center",
+                fontFamily: "monospace",
+                fontSize: 11,
+                color: "var(--text-dim)",
               }}
             >
-              <span
-                style={{
-                  fontFamily: "var(--font-head)",
-                  fontSize: 11,
-                  color: puzzle.typeColor,
-                }}
-              >
-                {letter}
-              </span>
-              <span
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 11,
-                  color: "var(--text-dim)",
-                }}
-              >
-                {code}
-              </span>
-            </div>
-          ))}
-        </div>
+              {c}
+            </span>
+          </div>
+        ))}
       </div>
-    );
-  }
-  if (puzzle.rot13map) {
-    return (
-      <div style={{ marginTop: 14 }}>
-        <div
-          style={{
-            fontSize: 10,
-            color: "var(--text-dim)",
-            letterSpacing: 2,
-            marginBottom: 6,
-            fontFamily: "var(--font-head)",
-          }}
-        >
-          ROT13 TABLE (A↔N, B↔O, C↔P…)
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            gap: 3,
-          }}
-        >
-          {ALPHABET.slice(0, 13).map((c) => {
-            const pair = String.fromCharCode(c.charCodeAt(0) + 13);
-            return (
-              <div
-                key={c}
-                style={{
-                  textAlign: "center",
-                  background: "rgba(255,255,255,.03)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 4,
-                  padding: "3px 5px",
-                  minWidth: 30,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "var(--text)",
-                    fontFamily: "var(--font-head)",
-                  }}
-                >
-                  {c}
-                </div>
-                <div style={{ fontSize: 10, color: puzzle.typeColor }}>
-                  {pair}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-  return null;
+    </div>
+  );
 }
 
 export default function Level5() {
+  const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [input, setInput] = useState("");
   const [attempts, setAttempts] = useState(0);
@@ -386,27 +194,49 @@ export default function Level5() {
   const [showRef, setShowRef] = useState(false);
   const [hintUsed, setHintUsed] = useState(false);
   const [result, setResult] = useState(null);
+  const [failed, setFailed] = useState(false);
   const [showReport, setShowReport] = useState(false);
-  const [solveTime, setSolveTime] = useState([]);
+
   const scoreRef = useRef(0);
   const correctRef = useRef(0);
+  const livesRef = useRef(3);
   const startRef = useRef(Date.now());
-  const qStartRef = useRef(Date.now());
   const inputRef = useRef(null);
 
   useEffect(() => {
-    if (feedback) return;
+    if (!isLevelUnlocked(5)) navigate("/levels");
+  }, []);
+
+  // Timer — only runs when no feedback showing and not done
+  useEffect(() => {
+    if (feedback || showReport || failed || result) return;
     if (timer <= 0) {
       handleTimeout();
       return;
     }
     const t = setTimeout(() => setTimer((t) => t - 1), 1000);
     return () => clearTimeout(t);
-  }, [timer, feedback]);
+  }, [timer, feedback, showReport, failed, result]);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [current]);
+    if (!feedback && !showReport) inputRef.current?.focus();
+  }, [current, feedback, showReport]);
+
+  const handleTimeout = () => {
+    const p = PUZZLES[current];
+    livesRef.current = Math.max(0, livesRef.current - 1);
+    setLives(livesRef.current);
+    setFeedback({
+      ok: false,
+      msg: `⏰ Time up! Answer was "${p.answer}"`,
+      fact: p.fact,
+      advance: true,
+    });
+    if (livesRef.current <= 0) {
+      // out of lives — check if already passed enough
+      checkAndFinish();
+    }
+  };
 
   const check = () => {
     const p = PUZZLES[current];
@@ -414,51 +244,46 @@ export default function Level5() {
     const isCorrect = val === p.answer.toUpperCase();
     setAttempts((a) => a + 1);
     if (isCorrect) {
-      const elapsed = Math.round((Date.now() - qStartRef.current) / 1000);
-      setSolveTime((t) => [...t, elapsed]);
-      const speedBonus = Math.max(0, (50 - elapsed) * 4);
-      const hintPenalty = hintUsed ? 50 : 0;
-      const attemptPenalty = attempts * 25;
-      const pts = Math.max(50, 200 + speedBonus - hintPenalty - attemptPenalty);
+      const pts = Math.max(50, 200 - attempts * 25) + timer * 4;
       scoreRef.current += pts;
       correctRef.current++;
       setFeedback({
         ok: true,
-        pts,
-        speedBonus,
-        msg: `✅ Correct! +${pts} pts${speedBonus > 0 ? ` (⚡ speed bonus +${speedBonus})` : ""}`,
+        msg: `✅ Correct! +${pts} pts`,
         fact: p.fact,
+        advance: true,
       });
     } else {
       if (attempts >= 2) {
-        setLives((l) => l - 1);
-        if (lives <= 1) {
-          setFeedback({
-            ok: false,
-            msg: `❌ Wrong — answer was "${p.answer}". Moving on.`,
-            fact: p.fact,
-            force: true,
-          });
+        // 3 wrong attempts = lose a life
+        livesRef.current = Math.max(0, livesRef.current - 1);
+        setLives(livesRef.current);
+        setFeedback({
+          ok: false,
+          msg: `❌ 3 attempts used. Answer: "${p.answer}"`,
+          fact: p.fact,
+          advance: true,
+        });
+        if (livesRef.current <= 0) {
+          checkAndFinish();
           return;
         }
+      } else {
+        setFeedback({
+          ok: false,
+          msg: `❌ Wrong (attempt ${attempts + 1}/3). Try again!`,
+          tryAgain: true,
+        });
       }
-      setFeedback({
-        ok: false,
-        msg: `❌ Wrong${attempts >= 1 ? ` (attempt ${attempts + 1}/3)` : ""}. Try again!`,
-        tryAgain: attempts < 2,
-      });
     }
   };
 
-  const handleTimeout = () => {
-    const p = PUZZLES[current];
-    setLives((l) => l - 1);
-    setFeedback({
-      ok: false,
-      msg: `⏰ Time up! Answer was "${p.answer}"`,
-      fact: p.fact,
-      force: true,
-    });
+  const checkAndFinish = () => {
+    // Called when lives run out — check current progress
+    setTimeout(() => {
+      const passed = correctRef.current >= PASS_REQ.correct;
+      finishLevel(passed);
+    }, 2000);
   };
 
   const advance = () => {
@@ -468,18 +293,24 @@ export default function Level5() {
     setHintUsed(false);
     setShowRef(false);
     if (current + 1 >= PUZZLES.length) {
-      setShowReport(true);
+      const passed = correctRef.current >= PASS_REQ.correct;
+      finishLevel(passed);
     } else {
       setCurrent((c) => c + 1);
       setTimer(50);
-      qStartRef.current = Date.now();
     }
   };
 
-  const submitLevel = async () => {
-    setShowReport(false);
+  const finishLevel = async (passed) => {
     const timeTaken = Math.floor((Date.now() - startRef.current) / 1000);
     const accuracy = Math.round((correctRef.current / PUZZLES.length) * 100);
+    if (!passed) {
+      markLevelFailed(5);
+      setFailed(true);
+      return;
+    }
+    markLevelPassed(5);
+    setShowReport(true);
     try {
       const { data } = await api.post("/game/level/submit", {
         level: 5,
@@ -501,198 +332,28 @@ export default function Level5() {
     }
   };
 
+  // ── FAILED screen (fixes blank screen bug) ────────────────────────────
+  if (failed)
+    return (
+      <div style={{ minHeight: "100vh" }}>
+        <Topbar showBack backTo="/levels" backLabel="LEVELS" />
+        <SystemBreach
+          levelNum={5}
+          reason={`You decrypted ${correctRef.current} out of ${PUZZLES.length} messages. Need at least ${PASS_REQ.correct} to pass.`}
+          correct={correctRef.current}
+          required={PASS_REQ.correct}
+          total={PASS_REQ.total}
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+
   const puzzle = PUZZLES[current];
-  const avgTime =
-    solveTime.length > 0
-      ? Math.round(solveTime.reduce((a, b) => a + b, 0) / solveTime.length)
-      : 0;
-  const rank =
-    correctRef.current === PUZZLES.length && lives > 0
-      ? "S"
-      : correctRef.current >= 4
-        ? "A"
-        : correctRef.current >= 3
-          ? "B"
-          : "C";
-  const rankColor =
-    rank === "S"
-      ? "var(--gold)"
-      : rank === "A"
-        ? "var(--green)"
-        : rank === "B"
-          ? "var(--accent)"
-          : "var(--red)";
 
   return (
     <div style={{ minHeight: "100vh", animation: "fadeIn .3s ease" }}>
       <Topbar showBack backTo="/levels" backLabel="LEVELS" />
       {result && <ResultModal result={result} levelNum={5} />}
-
-      {/* Final Report */}
-      {showReport && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.88)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 300,
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <div
-            style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--purple)",
-              borderRadius: 14,
-              padding: "40px 48px",
-              maxWidth: 480,
-              width: "90%",
-              textAlign: "center",
-              animation: "pop .4s cubic-bezier(0.34,1.56,0.64,1)",
-            }}
-          >
-            <div
-              style={{
-                fontFamily: "var(--font-head)",
-                fontSize: 72,
-                color: rankColor,
-                marginBottom: 8,
-              }}
-            >
-              {rank}
-            </div>
-            <div
-              style={{
-                fontFamily: "var(--font-head)",
-                color: "var(--purple)",
-                fontSize: 18,
-                letterSpacing: 2,
-                marginBottom: 4,
-              }}
-            >
-              ENCRYPTION LAB
-            </div>
-            <div
-              style={{
-                color: "var(--text-dim)",
-                fontSize: 13,
-                marginBottom: 24,
-              }}
-            >
-              Mission Debrief
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-                marginBottom: 20,
-              }}
-            >
-              {[
-                {
-                  label: "Decrypted",
-                  val: `${correctRef.current}/${PUZZLES.length}`,
-                  color: "var(--green)",
-                },
-                {
-                  label: "Accuracy",
-                  val: `${Math.round((correctRef.current / PUZZLES.length) * 100)}%`,
-                  color: "var(--gold)",
-                },
-                {
-                  label: "Avg Time",
-                  val: `${avgTime}s`,
-                  color: "var(--accent)",
-                },
-                {
-                  label: "Lives Left",
-                  val: `${"❤️".repeat(lives)}${"🖤".repeat(3 - lives)}`,
-                  color: "var(--red)",
-                },
-                {
-                  label: "Score",
-                  val: scoreRef.current.toLocaleString(),
-                  color: "var(--gold)",
-                },
-                {
-                  label: "Ciphers Used",
-                  val: "Caesar, ROT13, Morse",
-                  color: "var(--purple)",
-                },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    background: "rgba(0,0,0,.25)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    padding: "12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "var(--font-head)",
-                      fontSize: 16,
-                      color: s.color,
-                      marginBottom: 3,
-                    }}
-                  >
-                    {s.val}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 9,
-                      color: "var(--text-dim)",
-                      letterSpacing: 1,
-                    }}
-                  >
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div
-              style={{
-                background: "rgba(224,64,251,.07)",
-                border: "1px solid rgba(224,64,251,.25)",
-                borderRadius: 8,
-                padding: "10px 14px",
-                fontSize: 12,
-                color: "var(--text-dim)",
-                marginBottom: 16,
-                textAlign: "left",
-                lineHeight: 1.6,
-              }}
-            >
-              🔐{" "}
-              <strong style={{ color: "var(--purple)" }}>Did you know?</strong>{" "}
-              Modern AES-256 encryption would take longer than the age of the
-              universe to crack by brute force — even with all computers on
-              Earth working together.
-            </div>
-            <button
-              onClick={submitLevel}
-              style={{
-                padding: "12px 32px",
-                background: "var(--purple)",
-                color: "#fff",
-                fontFamily: "var(--font-head)",
-                fontSize: 12,
-                letterSpacing: 2,
-                borderRadius: 7,
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              COLLECT XP →
-            </button>
-          </div>
-        </div>
-      )}
 
       <div style={{ padding: "24px 32px", maxWidth: 760, margin: "0 auto" }}>
         {/* Header */}
@@ -722,7 +383,7 @@ export default function Level5() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <div style={{ fontSize: 18 }}>
+            <div style={{ fontSize: 20 }}>
               {"❤️".repeat(lives)}
               {"🖤".repeat(3 - lives)}
             </div>
@@ -739,7 +400,35 @@ export default function Level5() {
           </div>
         </div>
 
-        {/* Progress */}
+        {/* Pass requirement */}
+        <div
+          style={{
+            background: "rgba(255,214,0,.06)",
+            border: "1px solid rgba(255,214,0,.2)",
+            borderRadius: 8,
+            padding: "8px 14px",
+            marginBottom: 12,
+            fontSize: 12,
+            color: "var(--gold)",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>
+            🎯 Decrypt ≥ {PASS_REQ.correct}/{PASS_REQ.total} to pass
+          </span>
+          <span
+            style={{
+              color:
+                correctRef.current >= PASS_REQ.correct
+                  ? "var(--green)"
+                  : "var(--text-dim)",
+            }}
+          >
+            ✅ {correctRef.current} correct
+          </span>
+        </div>
+
         <div className="progress-track" style={{ marginBottom: 14 }}>
           <div
             style={{
@@ -783,36 +472,99 @@ export default function Level5() {
             background: "var(--bg-card)",
             border: `1px solid ${puzzle.typeColor}40`,
             borderRadius: 12,
-            padding: "28px",
-            marginBottom: 16,
+            padding: "24px",
+            marginBottom: 14,
+            textAlign: "center",
             animation: "fadeIn .3s ease",
           }}
         >
-          <CipherDisplay puzzle={puzzle} />
-          <div style={{ marginTop: 16, textAlign: "center" }}>
-            <button
-              onClick={() => setShowRef((r) => !r)}
-              style={{
-                fontSize: 11,
-                color: "var(--text-dim)",
-                background: "transparent",
-                border: "1px solid var(--border)",
-                padding: "5px 14px",
-                borderRadius: 20,
-                cursor: "pointer",
-                transition: "var(--transition)",
-              }}
-            >
-              {showRef ? "▲ Hide" : "▼ Show"} Reference Table
-            </button>
+          <div
+            style={{
+              fontSize: 10,
+              color: "var(--text-dim)",
+              letterSpacing: 3,
+              fontFamily: "var(--font-head)",
+              marginBottom: 12,
+            }}
+          >
+            {puzzle.typeDesc.toUpperCase()}
           </div>
-          {showRef && <ReferencePanel puzzle={puzzle} />}
+          <div
+            style={{
+              fontFamily: "var(--font-head)",
+              fontSize:
+                puzzle.cipher.length > 15
+                  ? 22
+                  : puzzle.cipher.length > 10
+                    ? 30
+                    : 42,
+              letterSpacing: puzzle.cipher.length > 15 ? 3 : 6,
+              color: puzzle.typeColor,
+              textShadow: `0 0 20px ${puzzle.typeColor}60`,
+              marginBottom: 14,
+              wordBreak: "break-all",
+            }}
+          >
+            {puzzle.cipher}
+          </div>
+          <button
+            onClick={() => setShowRef((r) => !r)}
+            style={{
+              fontSize: 11,
+              color: "var(--text-dim)",
+              background: "transparent",
+              border: "1px solid var(--border)",
+              padding: "5px 14px",
+              borderRadius: 20,
+              cursor: "pointer",
+            }}
+          >
+            {showRef ? "▲ Hide" : "▼ Show"} Reference Table
+          </button>
+          {showRef &&
+            (puzzle.type === "CAESAR" ? (
+              <CaesarWheel
+                shift={puzzle.typeDesc.includes("13") ? 13 : 3}
+                color={puzzle.typeColor}
+              />
+            ) : puzzle.type === "ROT13" ? (
+              <CaesarWheel shift={13} color={puzzle.typeColor} />
+            ) : puzzle.type === "MORSE" ? (
+              <MorseRef color={puzzle.typeColor} />
+            ) : (
+              <div
+                style={{
+                  marginTop: 12,
+                  fontSize: 12,
+                  color: "var(--text-dim)",
+                }}
+              >
+                💡 Reverse cipher: just read the text backwards!
+              </div>
+            ))}
         </div>
+
+        {/* Hint */}
+        {hintUsed && (
+          <div
+            style={{
+              background: "rgba(224,64,251,.1)",
+              border: "1px solid rgba(224,64,251,.3)",
+              borderRadius: 8,
+              padding: "12px 16px",
+              marginBottom: 12,
+              fontSize: 13,
+              color: "#e040fb",
+            }}
+          >
+            💡 {puzzle.hint}
+          </div>
+        )}
 
         {/* Input */}
         {!feedback && (
           <>
-            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
               <input
                 ref={inputRef}
                 value={input}
@@ -824,9 +576,9 @@ export default function Level5() {
                 autoComplete="off"
                 className="input-field"
                 style={{
-                  fontSize: puzzle.answer.length > 10 ? 15 : 20,
+                  fontSize: puzzle.answer.length > 12 ? 15 : 20,
                   fontFamily: "var(--font-head)",
-                  letterSpacing: puzzle.answer.length > 10 ? 2 : 5,
+                  letterSpacing: puzzle.answer.length > 12 ? 2 : 4,
                 }}
               />
               <button
@@ -861,22 +613,8 @@ export default function Level5() {
                   cursor: "pointer",
                 }}
               >
-                💡 Show Hint (-50 pts): {puzzle.hint.substring(0, 40)}...
+                💡 Show Hint (-50 pts)
               </button>
-            )}
-            {hintUsed && (
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "#e040fb",
-                  background: "rgba(224,64,251,.08)",
-                  border: "1px solid rgba(224,64,251,.25)",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                }}
-              >
-                💡 {puzzle.hint}
-              </div>
             )}
           </>
         )}
@@ -898,7 +636,7 @@ export default function Level5() {
               style={{
                 fontFamily: "var(--font-head)",
                 color: feedback.ok ? "var(--green)" : "var(--red)",
-                fontSize: 14,
+                fontSize: 13,
                 marginBottom: 8,
               }}
             >
@@ -922,7 +660,7 @@ export default function Level5() {
                 {feedback.fact}
               </div>
             )}
-            {!feedback.tryAgain && (
+            {feedback.advance && !feedback.tryAgain && (
               <button
                 onClick={advance}
                 style={{
@@ -969,7 +707,6 @@ export default function Level5() {
           </div>
         )}
 
-        {/* Score */}
         <div
           style={{
             marginTop: 14,

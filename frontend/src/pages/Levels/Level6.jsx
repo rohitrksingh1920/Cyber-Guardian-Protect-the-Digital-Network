@@ -1,173 +1,88 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Topbar from "../../components/Topbar";
 import ResultModal from "../../components/ResultModal";
+import SystemBreach from "../../components/SystemBreach";
 import api from "../../services/api";
+import { markLevelPassed, markLevelFailed, isLevelUnlocked } from "./LevelGate";
 
-const ALL_TASKS = [
+const TASKS = [
   {
     id: "firewall",
     label: "Enable Firewall",
     icon: "🔥",
-    desc: "Deploy WAF — block all unauthorized inbound traffic on all ports",
+    desc: "Block all unauthorized inbound connections on all ports",
     color: "#ff1744",
     points: 300,
     duration: 4,
-    drainRate: 15,
-    protects: "DDoS, Port Scan, Unauthorized Access",
   },
   {
     id: "block_ip",
     label: "Block Attacker IPs",
     icon: "🚫",
-    desc: "Blacklist 185.220.101.47 and related IPs on all network nodes",
+    desc: "Blacklist 185.220.101.47 and related IPs across all nodes",
     color: "#ff9100",
     points: 250,
     duration: 3,
-    drainRate: 10,
-    protects: "Direct Attacks, Reconnaissance",
   },
   {
     id: "patch",
     label: "Patch Zero-Day CVE",
     icon: "🩹",
-    desc: "Emergency patch for CVE-2024-1337 across all servers and APIs",
+    desc: "Emergency patch for CVE-2024-1337 across all servers",
     color: "#e040fb",
     points: 400,
     duration: 5,
-    drainRate: 20,
-    protects: "Exploit Attacks, Privilege Escalation",
   },
   {
     id: "encrypt",
     label: "Encrypt All Data",
     icon: "🔐",
-    desc: "AES-256 encrypt user records, payment data, and session tokens",
+    desc: "AES-256 encrypt all sensitive database files and sessions",
     color: "#00b8ff",
     points: 350,
     duration: 5,
-    drainRate: 12,
-    protects: "Data Exfiltration, Theft",
   },
   {
     id: "isolate",
     label: "Isolate Node-03",
     icon: "🌐",
-    desc: "Sever Node-03 from main grid — ransomware containment protocol",
+    desc: "Sever Node-03 from main grid — ransomware containment",
     color: "#ffd600",
     points: 300,
     duration: 3,
-    drainRate: 18,
-    protects: "Ransomware Spread, Lateral Movement",
   },
   {
     id: "backup",
     label: "Emergency Backup",
     icon: "💾",
-    desc: "Snapshot all critical servers and databases to cold-storage offsite",
+    desc: "Snapshot all critical servers to cold-storage offsite",
     color: "#00e676",
     points: 200,
     duration: 4,
-    drainRate: 8,
-    protects: "Data Loss, Ransomware",
   },
 ];
 
-const ATTACK_EVENTS = [
-  {
-    msg: "[CRITICAL] DDoS flood — 2.8 Gbps on port 443. CDN failing.",
-    cls: "crit",
-    taskId: "firewall",
-  },
-  {
-    msg: "[DANGER] Ransomware encrypting /var/data/users/ on Node-03.",
-    cls: "crit",
-    taskId: "isolate",
-  },
-  {
-    msg: "[ALERT] Privilege escalation via CVE-2024-1337 — root gained.",
-    cls: "warn",
-    taskId: "patch",
-  },
-  {
-    msg: "[CRITICAL] 47 admin sessions hijacked via session token theft.",
-    cls: "crit",
-    taskId: "block_ip",
-  },
-  {
-    msg: "[WARN] Lateral movement: 192.168.1.55 → 192.168.1.200 via SMB.",
-    cls: "warn",
-    taskId: null,
-  },
-  {
-    msg: "[ALERT] Data exfiltration: 4.2 GB being sent to 91.108.4.100.",
-    cls: "crit",
-    taskId: "encrypt",
-  },
-  {
-    msg: "[INFO] Attacker pivoting through DMZ into internal VLAN.",
-    cls: "warn",
-    taskId: null,
-  },
-  {
-    msg: "[CRITICAL] Web process injected with reverse shell — port 4444.",
-    cls: "crit",
-    taskId: "patch",
-  },
-  {
-    msg: "[WARN] SSH brute force: 15,000 attempts/min on 22 nodes.",
-    cls: "warn",
-    taskId: "block_ip",
-  },
-  {
-    msg: "[ALERT] SSL stripping active on payment gateway.",
-    cls: "crit",
-    taskId: "encrypt",
-  },
-  {
-    msg: "[INFO] SIEM detecting anomalous outbound spikes from Node-03.",
-    cls: "warn",
-    taskId: "isolate",
-  },
-  {
-    msg: "[CRITICAL] Database credentials dumped from memory.",
-    cls: "crit",
-    taskId: "backup",
-  },
+const LOGS = [
+  "⚠️  [ALERT] DDoS attack detected from 185.220.101.47",
+  "🔴 [CRITICAL] Ransomware spreading on Node-03",
+  "⚡ [INFO] 47,200 requests/sec flooding the network",
+  "💀 [DANGER] Attacker attempting privilege escalation",
+  "📡 [ALERT] Data exfiltration attempt on /etc/passwd",
+  "🔓 [WARNING] Firewall rules bypassed on port 8080",
+  "🦠 [CRITICAL] Malware injected into web server process",
+  "📊 [INFO] 3 additional attack vectors detected",
 ];
 
-function TaskProgressBar({ progress, color }) {
-  return (
-    <div
-      style={{
-        height: 4,
-        background: "var(--border)",
-        borderRadius: 2,
-        overflow: "hidden",
-        marginTop: 8,
-      }}
-    >
-      <div
-        style={{
-          height: "100%",
-          width: `${progress}%`,
-          background: color,
-          transition: "width 1s linear",
-          boxShadow: `0 0 6px ${color}`,
-        }}
-      />
-    </div>
-  );
-}
+// Pass = complete at least 5 out of 6 tasks before time runs out
+const PASS_REQ = { correct: 5, total: 6 };
 
 export default function Level6() {
-  // Randomise task order every run
-  const [tasks] = useState(() =>
-    [...ALL_TASKS].sort(() => Math.random() - 0.5),
-  );
+  const navigate = useNavigate();
+  const [tasks] = useState(() => [...TASKS].sort(() => Math.random() - 0.5));
   const [completed, setCompleted] = useState(new Set());
   const [progress, setProgress] = useState({});
   const [running, setRunning] = useState(null);
-  const [integrity, setIntegrity] = useState(100);
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(120);
   const [logs, setLogs] = useState([
@@ -178,14 +93,20 @@ export default function Level6() {
   ]);
   const [gameOver, setGameOver] = useState(false);
   const [victory, setVictory] = useState(false);
-  const [result, setResult] = useState(null);
   const [showOutcome, setShowOutcome] = useState(false);
+  const [result, setResult] = useState(null); // only set on PASS
+  const [failed, setFailed] = useState(false); // only set on FAIL
   const [startTime] = useState(Date.now());
+
   const logRef = useRef(null);
   const scoreRef = useRef(0);
   const completedRef = useRef(new Set());
-  const integrityRef = useRef(100);
   const logIdx = useRef(0);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    if (!isLevelUnlocked(6)) navigate("/levels");
+  }, []);
 
   const addLog = (msg, cls = "info") => {
     const ts = new Date().toLocaleTimeString("en", { hour12: false });
@@ -196,54 +117,43 @@ export default function Level6() {
     }, 50);
   };
 
-  // Timer countdown
+  // Countdown timer
   useEffect(() => {
     if (gameOver) return;
     if (timer <= 0) {
-      endGame(false);
+      if (!doneRef.current) {
+        doneRef.current = true;
+        setGameOver(true);
+        endGame(false);
+      }
       return;
     }
     const t = setTimeout(() => setTimer((t) => t - 1), 1000);
     return () => clearTimeout(t);
   }, [timer, gameOver]);
 
-  // Integrity drain for uncompleted tasks
-  useEffect(() => {
-    if (gameOver) return;
-    const iv = setInterval(() => {
-      const unfinished = tasks.filter((t) => !completedRef.current.has(t.id));
-      if (unfinished.length === 0) return;
-      const totalDrain = unfinished.reduce((s, t) => s + t.drainRate, 0) * 0.04;
-      integrityRef.current = Math.max(0, integrityRef.current - totalDrain);
-      setIntegrity(Math.round(integrityRef.current));
-      if (integrityRef.current <= 0) endGame(false);
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [gameOver, tasks]);
-
   // Rolling attack log
   useEffect(() => {
     if (gameOver) return;
     const iv = setInterval(() => {
-      const event = ATTACK_EVENTS[logIdx.current % ATTACK_EVENTS.length];
-      const alreadyHandled =
-        event.taskId && completedRef.current.has(event.taskId);
-      const msg = alreadyHandled
-        ? `[BLOCKED] Attack neutralized by ${tasks.find((t) => t.id === event.taskId)?.label || "defense"} ✓`
-        : event.msg;
-      addLog(msg, alreadyHandled ? "ok" : event.cls);
+      addLog(
+        LOGS[logIdx.current % LOGS.length],
+        logIdx.current % 2 === 0 ? "crit" : "warn",
+      );
       logIdx.current++;
     }, 2800);
     return () => clearInterval(iv);
-  }, [gameOver, tasks]);
+  }, [gameOver]);
 
-  // Check victory
+  // Check victory when all tasks done
   useEffect(() => {
-    if (completedRef.current.size === tasks.length && !gameOver) {
+    if (completedRef.current.size === tasks.length && !doneRef.current) {
       addLog(
         "[SYSTEM] All attack vectors neutralized! Network secured. 🛡️",
         "ok",
       );
+      doneRef.current = true;
+      setGameOver(true);
       setTimeout(() => endGame(true), 800);
     }
   }, [completed]);
@@ -251,7 +161,7 @@ export default function Level6() {
   const doTask = (task) => {
     if (completed.has(task.id) || gameOver || running) return;
     setRunning(task.id);
-    addLog(`[ACTION] Initiating: ${task.label}...`, "warn");
+    addLog(`[ACTION] Executing: ${task.label}...`, "warn");
     let prog = 0;
     const iv = setInterval(() => {
       prog += 100 / task.duration;
@@ -270,28 +180,41 @@ export default function Level6() {
   };
 
   const endGame = async (won) => {
-    if (gameOver) return;
-    setGameOver(true);
-    setVictory(won);
-    setShowOutcome(true);
-    if (!won)
-      addLog(
-        `[FAILED] ${tasks.length - completedRef.current.size} tasks incomplete. System breached.`,
-        "crit",
-      );
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
     const accuracy = (completedRef.current.size / tasks.length) * 100;
-    setTimeout(async () => {
-      try {
-        const { data } = await api.post("/game/level/submit", {
-          level: 6,
-          score: scoreRef.current,
-          accuracy,
-          time_taken: timeTaken,
-          difficulty: "agent",
-        });
+    const passed = completedRef.current.size >= PASS_REQ.correct && won;
+
+    setVictory(passed);
+    setShowOutcome(true);
+
+    if (!passed) {
+      // ── FAIL path ── mark failed, then show SystemBreach (NOT ResultModal)
+      markLevelFailed(6);
+      setTimeout(() => {
+        setShowOutcome(false);
+        setFailed(true);
+      }, 3000);
+      return;
+    }
+
+    // ── PASS path ── mark passed, submit to backend, show ResultModal
+    markLevelPassed(6);
+    try {
+      const { data } = await api.post("/game/level/submit", {
+        level: 6,
+        score: scoreRef.current,
+        accuracy,
+        time_taken: timeTaken,
+        difficulty: "agent",
+      });
+      // Only set result (shows ResultModal) when PASSED
+      setTimeout(() => {
+        setShowOutcome(false);
         setResult(data);
-      } catch {
+      }, 2000);
+    } catch {
+      setTimeout(() => {
+        setShowOutcome(false);
         setResult({
           xp_earned: 0,
           new_level: 1,
@@ -300,28 +223,40 @@ export default function Level6() {
           new_total_xp: 0,
           new_total_score: 0,
         });
-      }
-    }, 2000);
+      }, 2000);
+    }
   };
 
   const pct = (completed.size / tasks.length) * 100;
   const defColor =
     pct < 40 ? "var(--red)" : pct < 70 ? "var(--gold)" : "var(--green)";
-  const intColor =
-    integrity > 70
-      ? "var(--green)"
-      : integrity > 40
-        ? "var(--gold)"
-        : "var(--red)";
   const timerColor =
     timer <= 20 ? "var(--red)" : timer <= 40 ? "var(--gold)" : "var(--accent)";
+
+  // ── FAILED screen (fixes Mission Complete showing after breach) ─────────
+  if (failed)
+    return (
+      <div style={{ minHeight: "100vh" }}>
+        <Topbar showBack backTo="/levels" backLabel="LEVELS" />
+        <SystemBreach
+          levelNum={6}
+          reason={`You completed ${completedRef.current.size} out of ${tasks.length} defense tasks. Need at least ${PASS_REQ.correct} to secure the network.`}
+          correct={completedRef.current.size}
+          required={PASS_REQ.correct}
+          total={PASS_REQ.total}
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
 
   return (
     <div style={{ minHeight: "100vh", animation: "fadeIn .3s ease" }}>
       <Topbar showBack backTo="/levels" backLabel="LEVELS" />
+
+      {/* ResultModal ONLY shown when passed=true */}
       {result && <ResultModal result={result} levelNum={6} />}
 
-      {/* Win/Lose Overlay */}
+      {/* Win/Lose intermediate overlay */}
       {showOutcome && (
         <div
           style={{
@@ -378,7 +313,7 @@ export default function Level6() {
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: 10,
-                marginBottom: 20,
+                marginBottom: 16,
               }}
             >
               {[
@@ -386,14 +321,9 @@ export default function Level6() {
                   label: "Tasks Completed",
                   val: `${completed.size}/${tasks.length}`,
                   color:
-                    completed.size === tasks.length
+                    completed.size >= PASS_REQ.correct
                       ? "var(--green)"
-                      : "var(--orange)",
-                },
-                {
-                  label: "Defense Integrity",
-                  val: `${integrity}%`,
-                  color: intColor,
+                      : "var(--red)",
                 },
                 {
                   label: "Time Remaining",
@@ -404,6 +334,11 @@ export default function Level6() {
                   label: "Score",
                   val: scoreRef.current.toLocaleString(),
                   color: "var(--gold)",
+                },
+                {
+                  label: "Result",
+                  val: victory ? "PASSED" : "FAILED",
+                  color: victory ? "var(--green)" : "var(--red)",
                 },
               ].map((s) => (
                 <div
@@ -418,7 +353,7 @@ export default function Level6() {
                   <div
                     style={{
                       fontFamily: "var(--font-head)",
-                      fontSize: 22,
+                      fontSize: 18,
                       color: s.color,
                       marginBottom: 3,
                     }}
@@ -437,26 +372,6 @@ export default function Level6() {
                 </div>
               ))}
             </div>
-            {!victory && (
-              <div
-                style={{
-                  background: "rgba(255,23,68,.08)",
-                  border: "1px solid rgba(255,23,68,.3)",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  fontSize: 12,
-                  color: "var(--red)",
-                  marginBottom: 16,
-                  textAlign: "left",
-                }}
-              >
-                <strong>Incomplete tasks:</strong>{" "}
-                {tasks
-                  .filter((t) => !completed.has(t.id))
-                  .map((t) => t.label)
-                  .join(", ")}
-              </div>
-            )}
             <div
               style={{
                 fontSize: 11,
@@ -464,13 +379,13 @@ export default function Level6() {
                 animation: "pulse 1.5s infinite",
               }}
             >
-              Submitting score...
+              {victory ? "Collecting XP..." : "Processing result..."}
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ padding: "20px 28px", maxWidth: 1060, margin: "0 auto" }}>
+      <div style={{ padding: "20px 28px", maxWidth: 1040, margin: "0 auto" }}>
         {/* Header */}
         <div
           style={{
@@ -494,8 +409,7 @@ export default function Level6() {
             <div
               style={{ color: "var(--text-dim)", fontSize: 12, marginTop: 3 }}
             >
-              Click tasks to execute defenses. Tasks run for a few seconds —
-              plan ahead!
+              Complete defense tasks before time runs out!
             </div>
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
@@ -524,7 +438,7 @@ export default function Level6() {
                 fontFamily: "var(--font-head)",
                 fontSize: 36,
                 color: timerColor,
-                textShadow: timer <= 20 ? `0 0 15px var(--red)` : "none",
+                textShadow: timer <= 20 ? "0 0 15px var(--red)" : "none",
                 transition: "color .3s",
                 animation: timer <= 10 ? "blink 1s infinite" : "",
               }}
@@ -534,7 +448,36 @@ export default function Level6() {
           </div>
         </div>
 
-        {/* Dual progress bars */}
+        {/* Pass requirement */}
+        <div
+          style={{
+            background: "rgba(255,214,0,.06)",
+            border: "1px solid rgba(255,214,0,.2)",
+            borderRadius: 8,
+            padding: "8px 14px",
+            marginBottom: 12,
+            fontSize: 12,
+            color: "var(--gold)",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>
+            🎯 Complete ≥ {PASS_REQ.correct}/{PASS_REQ.total} tasks to pass
+          </span>
+          <span
+            style={{
+              color:
+                completed.size >= PASS_REQ.correct
+                  ? "var(--green)"
+                  : "var(--text-dim)",
+            }}
+          >
+            ✅ {completed.size} done
+          </span>
+        </div>
+
+        {/* Dual bars */}
         <div
           style={{
             display: "grid",
@@ -557,7 +500,7 @@ export default function Level6() {
             >
               <span>DEFENSE PROGRESS</span>
               <span style={{ color: defColor }}>
-                {completed.size}/{tasks.length} tasks
+                {completed.size}/{tasks.length}
               </span>
             </div>
             <div
@@ -591,8 +534,8 @@ export default function Level6() {
                 marginBottom: 4,
               }}
             >
-              <span>DEFENSE INTEGRITY</span>
-              <span style={{ color: intColor }}>{integrity}%</span>
+              <span>TIME REMAINING</span>
+              <span style={{ color: timerColor }}>{timer}s</span>
             </div>
             <div
               style={{
@@ -605,63 +548,23 @@ export default function Level6() {
               <div
                 style={{
                   height: "100%",
-                  width: `${integrity}%`,
-                  background: intColor,
-                  transition: "width .5s ease, background .5s",
-                  boxShadow: `0 0 8px ${intColor}`,
+                  width: `${(timer / 120) * 100}%`,
+                  background: timerColor,
+                  transition: "width 1s linear",
+                  boxShadow: `0 0 8px ${timerColor}`,
                 }}
               />
             </div>
           </div>
         </div>
 
-        {/* Status message */}
         <div
-          style={{
-            background:
-              integrity > 70
-                ? "rgba(0,230,118,.06)"
-                : integrity > 40
-                  ? "rgba(255,214,0,.06)"
-                  : "rgba(255,23,68,.06)",
-            border: `1px solid ${intColor}30`,
-            borderRadius: 8,
-            padding: "8px 16px",
-            fontSize: 12,
-            color: intColor,
-            marginBottom: 14,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span style={{ animation: "blink 1s infinite" }}>⚠️</span>
-          {integrity > 70
-            ? "Network holding. Continue defense tasks."
-            : integrity > 40
-              ? "CRITICAL: Network integrity degrading fast. Act now!"
-              : "🚨 EMERGENCY: Network about to collapse! Complete remaining tasks immediately!"}
-          {running && (
-            <span
-              style={{
-                marginLeft: "auto",
-                color: "var(--accent)",
-                fontFamily: "var(--font-head)",
-                fontSize: 10,
-              }}
-            >
-              ⚙️ Running: {tasks.find((t) => t.id === running)?.label}...
-            </span>
-          )}
-        </div>
-
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}
+          style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16 }}
         >
           {/* Tasks */}
           <div>
             <div className="section-label">
-              DEFENSE TASKS — CLICK TO EXECUTE (one at a time)
+              DEFENSE TASKS — CLICK TO EXECUTE
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {tasks.map((task) => {
@@ -686,20 +589,14 @@ export default function Level6() {
                       gap: 14,
                       transition: "var(--transition)",
                       opacity: isLocked ? 0.5 : 1,
-                      position: "relative",
-                      overflow: "hidden",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isDone && !running) {
+                      if (!isDone && !running)
                         e.currentTarget.style.borderColor = task.color;
-                        e.currentTarget.style.background = `${task.color}08`;
-                      }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isDone && !running) {
+                      if (!isDone && !running)
                         e.currentTarget.style.borderColor = "var(--border)";
-                        e.currentTarget.style.background = "var(--bg-card)";
-                      }
                     }}
                   >
                     <span style={{ fontSize: 26, flexShrink: 0 }}>
@@ -725,19 +622,26 @@ export default function Level6() {
                       >
                         {task.desc}
                       </div>
-                      {!isDone && (
+                      {isRunning && (
                         <div
                           style={{
-                            fontSize: 10,
-                            color: `${task.color}90`,
-                            marginTop: 3,
+                            height: 3,
+                            background: "var(--border)",
+                            borderRadius: 2,
+                            overflow: "hidden",
+                            marginTop: 8,
                           }}
                         >
-                          🛡 Protects: {task.protects}
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${prog}%`,
+                              background: task.color,
+                              transition: "width 1s linear",
+                              boxShadow: `0 0 6px ${task.color}`,
+                            }}
+                          />
                         </div>
-                      )}
-                      {isRunning && (
-                        <TaskProgressBar progress={prog} color={task.color} />
                       )}
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -763,7 +667,7 @@ export default function Level6() {
           {/* Log + Status */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
-              <div className="section-label">LIVE ATTACK LOG</div>
+              <div className="section-label">ATTACK LOG</div>
               <div
                 ref={logRef}
                 style={{
@@ -771,7 +675,7 @@ export default function Level6() {
                   border: "1px solid var(--border)",
                   borderRadius: 10,
                   padding: "12px",
-                  height: 270,
+                  height: 260,
                   overflowY: "auto",
                   fontFamily: "monospace",
                   fontSize: 11,
@@ -799,7 +703,6 @@ export default function Level6() {
                 ))}
               </div>
             </div>
-
             <div
               style={{
                 background: "var(--bg-card)",
@@ -813,11 +716,11 @@ export default function Level6() {
               </div>
               {[
                 ["Firewall", completed.has("firewall")],
+                ["Encryption", completed.has("encrypt")],
+                ["Network", completed.has("isolate")],
+                ["Backup", completed.has("backup")],
                 ["IP Blocked", completed.has("block_ip")],
                 ["CVE Patched", completed.has("patch")],
-                ["Data Encrypted", completed.has("encrypt")],
-                ["Node-03 Isolated", completed.has("isolate")],
-                ["Backup Done", completed.has("backup")],
               ].map(([label, ok]) => (
                 <div
                   key={label}
@@ -846,7 +749,6 @@ export default function Level6() {
           </div>
         </div>
       </div>
-
       <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
     </div>
   );

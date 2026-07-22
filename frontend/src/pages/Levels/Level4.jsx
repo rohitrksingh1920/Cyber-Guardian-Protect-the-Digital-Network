@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Topbar from "../../components/Topbar";
 import ResultModal from "../../components/ResultModal";
+import SystemBreach from "../../components/SystemBreach";
 import api from "../../services/api";
+import { markLevelPassed, markLevelFailed, isLevelUnlocked } from "./LevelGate";
 
-// ── Threat definitions with multiple-choice responses ──────────────────────
 const THREAT_POOL = [
   {
     type: "DDoS FLOOD",
     color: "#ff1744",
     priority: "CRITICAL",
     icon: "💥",
-    desc: "Volumetric attack — 3.2 Gbps flooding port 443. CDN failing.",
+    desc: "Volumetric attack — 3.2 Gbps flooding port 443.",
     ip: "185.220.101.47",
-    pts: 250,
+    pts: 150,
     options: [
       "Block IP Address",
       "Rate Limiting & Traffic Scrubbing",
@@ -21,34 +23,34 @@ const THREAT_POOL = [
     ],
     correct: 1,
     reason:
-      "Rate limiting and traffic scrubbing filters malicious packets while keeping legitimate traffic flowing.",
+      "Rate limiting filters malicious packets while keeping legitimate traffic flowing.",
   },
   {
     type: "SQL INJECTION",
     color: "#e040fb",
     priority: "CRITICAL",
     icon: "💉",
-    desc: "Malicious SQL payload detected in login POST parameter.",
+    desc: "Malicious SQL payload in login POST parameter.",
     ip: "203.0.113.10",
-    pts: 300,
+    pts: 150,
     options: [
       "Close All Ports",
       "Restart Database",
       "Sanitize & Validate Input",
-      "Encrypt the Database",
+      "Encrypt Database",
     ],
     correct: 2,
     reason:
-      "Input sanitization removes malicious SQL characters before they reach the database query.",
+      "Input sanitization removes malicious SQL characters before they reach the database.",
   },
   {
     type: "BRUTE FORCE",
     color: "#ff9100",
     priority: "HIGH",
     icon: "🔨",
-    desc: "12,000 SSH login attempts per minute from single IP.",
+    desc: "12,000 SSH login attempts per minute.",
     ip: "198.51.100.5",
-    pts: 200,
+    pts: 120,
     options: [
       "Lock Account & Block IP",
       "Disable SSH",
@@ -57,16 +59,16 @@ const THREAT_POOL = [
     ],
     correct: 0,
     reason:
-      "Locking the account and blacklisting the source IP immediately stops the attack.",
+      "Locking the account and blacklisting the IP immediately stops the attack.",
   },
   {
     type: "MITM ATTACK",
     color: "#00b8ff",
     priority: "HIGH",
     icon: "👀",
-    desc: "ARP poisoning detected on subnet 192.168.1.0/24. Traffic being intercepted.",
+    desc: "ARP poisoning on subnet 192.168.1.0/24.",
     ip: "172.16.0.22",
-    pts: 250,
+    pts: 130,
     options: [
       "Restart Router",
       "Enable HTTPS & Encrypt Channel",
@@ -75,16 +77,16 @@ const THREAT_POOL = [
     ],
     correct: 1,
     reason:
-      "Encrypting all channels with HTTPS/TLS means intercepted traffic is unreadable to the attacker.",
+      "Encrypting all channels with HTTPS/TLS means intercepted traffic is unreadable.",
   },
   {
     type: "RANSOMWARE",
     color: "#ff1744",
     priority: "CRITICAL",
     icon: "🔒",
-    desc: "File encryption starting on Node-03. Spreading fast.",
+    desc: "File encryption starting on Node-03.",
     ip: "10.10.10.88",
-    pts: 350,
+    pts: 180,
     options: [
       "Pay the Ransom",
       "Delete All Files",
@@ -92,53 +94,52 @@ const THREAT_POOL = [
       "Run Antivirus Scan",
     ],
     correct: 2,
-    reason:
-      "Immediate isolation stops ransomware spreading to other systems. Then restore from clean backups.",
+    reason: "Immediate isolation stops ransomware spreading to other systems.",
   },
   {
     type: "PORT SCAN",
     color: "#ff9100",
     priority: "MEDIUM",
     icon: "🔍",
-    desc: "Stealth SYN scan across all TCP ports. Reconnaissance phase.",
+    desc: "Stealth SYN scan across all TCP ports.",
     ip: "10.0.0.55",
-    pts: 150,
+    pts: 100,
     options: [
       "Close Unused Ports & Enable Firewall",
       "Restart Network",
       "Block Port 22 Only",
-      "Alert the Team",
+      "Alert Team",
     ],
     correct: 0,
     reason:
-      "Closing unused ports removes attack surface. A firewall rule drops unsolicited SYN packets.",
+      "Closing unused ports removes attack surface; firewall drops unsolicited SYN packets.",
   },
   {
-    type: "ZERO-DAY EXPLOIT",
+    type: "ZERO-DAY",
     color: "#e040fb",
     priority: "CRITICAL",
     icon: "⚡",
-    desc: "CVE-2024-1337 being exploited in Apache server.",
+    desc: "CVE-2024-1337 being exploited in Apache.",
     ip: "45.33.32.156",
-    pts: 350,
+    pts: 180,
     options: [
-      "Reboot the Server",
+      "Reboot Server",
       "Apply Virtual Patching & WAF Rule",
       "Change Admin Password",
       "Disable Website",
     ],
     correct: 1,
     reason:
-      "A Web Application Firewall rule can block the exploit pattern even before an official patch is available.",
+      "A WAF rule can block the exploit pattern even before an official patch is available.",
   },
   {
     type: "CREDENTIAL DUMP",
     color: "#ff1744",
     priority: "CRITICAL",
     icon: "🗝️",
-    desc: "Admin password hashes extracted from memory via Mimikatz.",
+    desc: "Admin hashes extracted via Mimikatz.",
     ip: "192.168.1.200",
-    pts: 300,
+    pts: 160,
     options: [
       "Change Passwords Later",
       "Force Reset All Credentials & Enable MFA",
@@ -147,28 +148,20 @@ const THREAT_POOL = [
     ],
     correct: 1,
     reason:
-      "Forcing credential reset invalidates stolen hashes. MFA ensures valid credentials still need a second factor.",
+      "Force reset invalidates stolen hashes. MFA ensures credentials still need a second factor.",
   },
 ];
 
-const PRIORITY_COLORS = {
-  CRITICAL: "var(--red)",
-  HIGH: "var(--orange)",
-  MEDIUM: "var(--gold)",
-};
+// Pass = block at least 6 out of 8 threats correctly
+const PASS_REQ = { correct: 6, total: 8 };
 
-// ── Single threat card with A/B/C/D response ──────────────────────────────
 function ThreatCard({ threat, onAnswer }) {
   const [chosen, setChosen] = useState(null);
-
   const pick = (idx) => {
     if (chosen !== null) return;
     setChosen(idx);
-    const ok = idx === threat.correct;
-    // Show result for 2s then report back
-    setTimeout(() => onAnswer(ok), 2000);
+    setTimeout(() => onAnswer(idx === threat.correct), 2000);
   };
-
   return (
     <div
       style={{
@@ -179,7 +172,6 @@ function ThreatCard({ threat, onAnswer }) {
         animation: "fadeIn .35s ease",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -206,11 +198,10 @@ function ThreatCard({ threat, onAnswer }) {
                 fontSize: 9,
                 padding: "1px 7px",
                 borderRadius: 10,
-                background: `${PRIORITY_COLORS[threat.priority]}15`,
-                border: `1px solid ${PRIORITY_COLORS[threat.priority]}`,
-                color: PRIORITY_COLORS[threat.priority],
+                background: `rgba(255,255,255,.05)`,
+                border: `1px solid ${threat.color}50`,
+                color: threat.color,
                 fontFamily: "var(--font-head)",
-                letterSpacing: 1,
               }}
             >
               {threat.priority}
@@ -227,8 +218,6 @@ function ThreatCard({ threat, onAnswer }) {
           +{threat.pts}
         </span>
       </div>
-
-      {/* Info */}
       <div
         style={{
           fontFamily: "monospace",
@@ -249,8 +238,6 @@ function ThreatCard({ threat, onAnswer }) {
       >
         {threat.desc}
       </div>
-
-      {/* Life bar */}
       <div
         style={{
           height: 3,
@@ -269,8 +256,6 @@ function ThreatCard({ threat, onAnswer }) {
           }}
         />
       </div>
-
-      {/* Response options */}
       {chosen === null ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           <div
@@ -346,9 +331,9 @@ function ThreatCard({ threat, onAnswer }) {
   );
 }
 
-// ── Main Level 4 ───────────────────────────────────────────────────────────
 export default function Level4() {
-  const [threats, setThreats] = useState([]); // active threat cards
+  const navigate = useNavigate();
+  const [threats, setThreats] = useState([]);
   const [health, setHealth] = useState(100);
   const [score, setScore] = useState(0);
   const [blocked, setBlocked] = useState(0);
@@ -358,6 +343,7 @@ export default function Level4() {
   const [gameOver, setGameOver] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [result, setResult] = useState(null);
+  const [failed, setFailed] = useState(false);
   const [startTime] = useState(Date.now());
 
   const uidRef = useRef(0);
@@ -365,56 +351,57 @@ export default function Level4() {
   const healthRef = useRef(100);
   const blockedRef = useRef(0);
   const missedRef = useRef(0);
-  const gameOverRef = useRef(false);
+  const wrongRef = useRef(0);
+  const doneRef = useRef(false);
 
-  // ── Spawn a threat every 3 seconds ────────────────────────────────────
+  useEffect(() => {
+    if (!isLevelUnlocked(4)) navigate("/levels");
+  }, []);
+
+  // Spawn threats every 3s
   useEffect(() => {
     if (gameOver) return;
     const iv = setInterval(() => {
-      if (gameOverRef.current) return;
+      if (doneRef.current) return;
       setThreats((prev) => {
-        if (prev.length >= 4) return prev; // max 4 visible at once
+        if (prev.length >= 4) return prev;
         const pick =
           THREAT_POOL[Math.floor(Math.random() * THREAT_POOL.length)];
-        const maxLife = 10;
         return [
           ...prev,
-          { ...pick, uid: uidRef.current++, life: maxLife, maxLife },
+          { ...pick, uid: uidRef.current++, life: 10, maxLife: 10 },
         ];
       });
     }, 3000);
     return () => clearInterval(iv);
   }, [gameOver]);
 
-  // ── Drain life bar on active threats every 500ms ──────────────────────
+  // Drain life bars, remove expired threats
   useEffect(() => {
     if (gameOver) return;
     const iv = setInterval(() => {
-      if (gameOverRef.current) return;
+      if (doneRef.current) return;
       setThreats((prev) => {
+        let drain = 0,
+          newMissed = 0;
         const alive = [];
-        let drain = 0;
-        let newMissed = 0;
         prev.forEach((t) => {
           const newLife = t.life - 0.5;
           if (newLife <= 0) {
-            // Threat expired without response
             drain +=
-              t.priority === "CRITICAL" ? 18 : t.priority === "HIGH" ? 10 : 5;
+              t.priority === "CRITICAL" ? 15 : t.priority === "HIGH" ? 10 : 5;
             newMissed++;
-          } else {
-            alive.push({ ...t, life: newLife });
-          }
+          } else alive.push({ ...t, life: newLife });
         });
         if (drain > 0) {
           healthRef.current = Math.max(0, healthRef.current - drain);
           setHealth(Math.round(healthRef.current));
           missedRef.current += newMissed;
           setMissed(missedRef.current);
-          if (healthRef.current <= 0 && !gameOverRef.current) {
-            gameOverRef.current = true;
+          if (healthRef.current <= 0 && !doneRef.current) {
+            doneRef.current = true;
             setGameOver(true);
-            setTimeout(() => setShowReport(true), 300);
+            setTimeout(() => endGame(), 300);
           }
         }
         return alive;
@@ -423,14 +410,14 @@ export default function Level4() {
     return () => clearInterval(iv);
   }, [gameOver]);
 
-  // ── Game countdown ─────────────────────────────────────────────────────
+  // Countdown
   useEffect(() => {
     if (gameOver) return;
     if (timeLeft <= 0) {
-      if (!gameOverRef.current) {
-        gameOverRef.current = true;
+      if (!doneRef.current) {
+        doneRef.current = true;
         setGameOver(true);
-        setTimeout(() => setShowReport(true), 300);
+        setTimeout(() => endGame(), 300);
       }
       return;
     }
@@ -438,54 +425,57 @@ export default function Level4() {
     return () => clearTimeout(t);
   }, [timeLeft, gameOver]);
 
-  // ── Submit when report shown ───────────────────────────────────────────
-  useEffect(() => {
-    if (!showReport) return;
-    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-    const total = blockedRef.current + missedRef.current;
-    const accuracy = total > 0 ? (blockedRef.current / total) * 100 : 0;
-    api
-      .post("/game/level/submit", {
-        level: 4,
-        score: scoreRef.current,
-        accuracy,
-        time_taken: timeTaken,
-        difficulty: "agent",
-      })
-      .then(({ data }) => setResult(data))
-      .catch(() =>
-        setResult({
-          xp_earned: 0,
-          new_level: 1,
-          achievements_unlocked: [],
-          level_up: false,
-          new_total_xp: 0,
-          new_total_score: 0,
-        }),
-      );
-  }, [showReport]);
-
-  // ── Handle player response ─────────────────────────────────────────────
   const handleAnswer = (uid, pts, isCorrect) => {
-    // Remove the answered threat
     setThreats((prev) => prev.filter((t) => t.uid !== uid));
-
     if (isCorrect) {
       scoreRef.current += pts;
       blockedRef.current++;
       setScore(scoreRef.current);
       setBlocked(blockedRef.current);
     } else {
-      // Wrong answer: drain health
-      const penalty = 10;
-      healthRef.current = Math.max(0, healthRef.current - penalty);
+      healthRef.current = Math.max(0, healthRef.current - 10);
       setHealth(Math.round(healthRef.current));
-      setWrong((w) => w + 1);
-      if (healthRef.current <= 0 && !gameOverRef.current) {
-        gameOverRef.current = true;
+      wrongRef.current++;
+      setWrong(wrongRef.current);
+      if (healthRef.current <= 0 && !doneRef.current) {
+        doneRef.current = true;
         setGameOver(true);
-        setTimeout(() => setShowReport(true), 300);
+        setTimeout(() => endGame(), 300);
       }
+    }
+  };
+
+  const endGame = async () => {
+    setShowReport(true);
+    const total = blockedRef.current + missedRef.current;
+    const accuracy = total > 0 ? (blockedRef.current / total) * 100 : 0;
+    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+    const passed = blockedRef.current >= PASS_REQ.correct;
+
+    if (!passed) {
+      markLevelFailed(4);
+      setTimeout(() => setFailed(true), 2500);
+      return;
+    }
+    markLevelPassed(4);
+    try {
+      const { data } = await api.post("/game/level/submit", {
+        level: 4,
+        score: scoreRef.current,
+        accuracy,
+        time_taken: timeTaken,
+        difficulty: "agent",
+      });
+      setResult(data);
+    } catch {
+      setResult({
+        xp_earned: 0,
+        new_level: 1,
+        achievements_unlocked: [],
+        level_up: false,
+        new_total_xp: 0,
+        new_total_score: 0,
+      });
     }
   };
 
@@ -493,35 +483,33 @@ export default function Level4() {
     health > 70 ? "var(--green)" : health > 40 ? "var(--gold)" : "var(--red)";
   const timerColor =
     timeLeft <= 15 ? "var(--red)" : timeLeft <= 30 ? "var(--gold)" : "#ff9100";
-  const grade =
-    health >= 90 && wrong === 0
-      ? "S"
-      : health >= 70
-        ? "A"
-        : health >= 50
-          ? "B"
-          : "C";
-  const gradeColor =
-    grade === "S"
-      ? "var(--gold)"
-      : grade === "A"
-        ? "var(--green)"
-        : grade === "B"
-          ? "var(--accent)"
-          : "var(--red)";
+
+  if (failed)
+    return (
+      <div style={{ minHeight: "100vh" }}>
+        <Topbar showBack backTo="/levels" backLabel="LEVELS" />
+        <SystemBreach
+          levelNum={4}
+          reason={`You only blocked ${blockedRef.current} threats. Need at least ${PASS_REQ.correct} to secure the network.`}
+          correct={blockedRef.current}
+          required={PASS_REQ.correct}
+          total={PASS_REQ.total}
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
 
   return (
     <div style={{ minHeight: "100vh", animation: "fadeIn .3s ease" }}>
       <Topbar showBack backTo="/levels" backLabel="LEVELS" />
       {result && <ResultModal result={result} levelNum={4} />}
 
-      {/* End Report */}
-      {showReport && (
+      {showReport && !failed && !result && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,.88)",
+            background: "rgba(0,0,0,.85)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -532,10 +520,10 @@ export default function Level4() {
           <div
             style={{
               background: "var(--bg-card)",
-              border: `1px solid ${health > 0 ? "var(--accent)" : "var(--red)"}`,
+              border: "1px solid var(--accent)",
               borderRadius: 14,
-              padding: "40px 48px",
-              maxWidth: 480,
+              padding: "36px 44px",
+              maxWidth: 440,
               width: "90%",
               textAlign: "center",
               animation: "pop .4s cubic-bezier(0.34,1.56,0.64,1)",
@@ -544,67 +532,30 @@ export default function Level4() {
             <div
               style={{
                 fontFamily: "var(--font-head)",
-                fontSize: 72,
-                color: gradeColor,
-                marginBottom: 8,
-              }}
-            >
-              {grade}
-            </div>
-            <div
-              style={{
-                fontFamily: "var(--font-head)",
                 color: health > 0 ? "var(--green)" : "var(--red)",
                 fontSize: 18,
                 letterSpacing: 2,
-                marginBottom: 4,
+                marginBottom: 16,
               }}
             >
               {health > 0 ? "NETWORK DEFENDED" : "SYSTEM BREACHED"}
             </div>
             <div
               style={{
-                color: "var(--text-dim)",
-                fontSize: 13,
-                marginBottom: 24,
-              }}
-            >
-              Network Guardian — Mission Report
-            </div>
-            <div
-              style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: 10,
-                marginBottom: 20,
+                marginBottom: 16,
               }}
             >
               {[
-                {
-                  label: "Attacks Blocked",
-                  val: blocked,
-                  color: "var(--green)",
-                },
-                { label: "Threats Missed", val: missed, color: "var(--red)" },
-                {
-                  label: "Wrong Responses",
-                  val: wrong,
-                  color: "var(--orange)",
-                },
-                {
-                  label: "Network Health",
-                  val: `${health}%`,
-                  color: healthColor,
-                },
-                {
-                  label: "Score",
-                  val: scoreRef.current.toLocaleString(),
-                  color: "var(--gold)",
-                },
-                { label: "Security Grade", val: grade, color: gradeColor },
+                { l: "Blocked", v: blocked, c: "var(--green)" },
+                { l: "Missed", v: missed, c: "var(--red)" },
+                { l: "Wrong", v: wrong, c: "var(--orange)" },
+                { l: "Health", v: `${health}%`, c: healthColor },
               ].map((s) => (
                 <div
-                  key={s.label}
+                  key={s.l}
                   style={{
                     background: "rgba(0,0,0,.25)",
                     border: "1px solid var(--border)",
@@ -616,11 +567,11 @@ export default function Level4() {
                     style={{
                       fontFamily: "var(--font-head)",
                       fontSize: 20,
-                      color: s.color,
+                      color: s.c,
                       marginBottom: 3,
                     }}
                   >
-                    {s.val}
+                    {s.v}
                   </div>
                   <div
                     style={{
@@ -629,28 +580,25 @@ export default function Level4() {
                       letterSpacing: 1,
                     }}
                   >
-                    {s.label}
+                    {s.l}
                   </div>
                 </div>
               ))}
             </div>
-            {!result && (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--text-dim)",
-                  animation: "pulse 1.5s infinite",
-                }}
-              >
-                Submitting score...
-              </div>
-            )}
+            <div
+              style={{
+                fontSize: 11,
+                color: "var(--text-dim)",
+                animation: "pulse 1.5s infinite",
+              }}
+            >
+              Processing...
+            </div>
           </div>
         </div>
       )}
 
       <div style={{ padding: "20px 28px", maxWidth: 1000, margin: "0 auto" }}>
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -681,7 +629,6 @@ export default function Level4() {
               fontFamily: "var(--font-head)",
               fontSize: 34,
               color: timerColor,
-              textShadow: timeLeft <= 10 ? "0 0 15px var(--red)" : "none",
               transition: "color .3s",
             }}
           >
@@ -689,7 +636,6 @@ export default function Level4() {
           </div>
         </div>
 
-        {/* Stats */}
         <div
           style={{
             display: "grid",
@@ -699,34 +645,51 @@ export default function Level4() {
           }}
         >
           {[
-            {
-              label: "SCORE",
-              val: score.toLocaleString(),
-              color: "var(--gold)",
-            },
-            { label: "BLOCKED", val: blocked, color: "var(--green)" },
-            { label: "MISSED", val: missed, color: "var(--red)" },
-            { label: "WRONG", val: wrong, color: "var(--orange)" },
-            { label: "HEALTH", val: `${health}%`, color: healthColor },
+            { l: "SCORE", v: score.toLocaleString(), c: "var(--gold)" },
+            { l: "BLOCKED", v: blocked, c: "var(--green)" },
+            { l: "MISSED", v: missed, c: "var(--red)" },
+            { l: "WRONG", v: wrong, c: "var(--orange)" },
+            { l: "HEALTH", v: `${health}%`, c: healthColor },
           ].map((s) => (
-            <div
-              key={s.label}
-              className="stat-card"
-              style={{ padding: "10px" }}
-            >
-              <div
-                className="stat-val"
-                style={{ color: s.color, fontSize: 20 }}
-              >
-                {s.val}
+            <div key={s.l} className="stat-card" style={{ padding: "10px" }}>
+              <div className="stat-val" style={{ color: s.c, fontSize: 20 }}>
+                {s.v}
               </div>
-              <div className="stat-lbl">{s.label}</div>
+              <div className="stat-lbl">{s.l}</div>
             </div>
           ))}
         </div>
 
-        {/* Network health bar */}
-        <div style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            background: "rgba(255,214,0,.06)",
+            border: "1px solid rgba(255,214,0,.2)",
+            borderRadius: 8,
+            padding: "8px 14px",
+            marginBottom: 10,
+            fontSize: 12,
+            color: "var(--gold)",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>
+            🎯 Block ≥ {PASS_REQ.correct}/{PASS_REQ.total} threats correctly to
+            pass
+          </span>
+          <span
+            style={{
+              color:
+                blocked >= PASS_REQ.correct
+                  ? "var(--green)"
+                  : "var(--text-dim)",
+            }}
+          >
+            ✅ {blocked} blocked
+          </span>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
           <div
             style={{
               display: "flex",
@@ -743,9 +706,9 @@ export default function Level4() {
           </div>
           <div
             style={{
-              height: 10,
+              height: 8,
               background: "var(--border)",
-              borderRadius: 5,
+              borderRadius: 4,
               overflow: "hidden",
             }}
           >
@@ -754,29 +717,21 @@ export default function Level4() {
                 height: "100%",
                 width: `${health}%`,
                 background: healthColor,
-                borderRadius: 5,
+                borderRadius: 4,
                 transition: "width .4s ease, background .4s",
                 boxShadow: `0 0 8px ${healthColor}`,
               }}
             />
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 3 }}>
-            {health > 70
-              ? "🛡️ Network Stable"
-              : health > 40
-                ? "⚠️ Network Under Stress"
-                : "🚨 CRITICAL — Network Failing!"}
-          </div>
         </div>
 
-        {/* Threats area */}
         <div
           style={{
             background: "rgba(0,0,0,.3)",
             border: "1px solid var(--border)",
             borderRadius: 12,
             padding: "16px",
-            minHeight: 320,
+            minHeight: 300,
             position: "relative",
           }}
         >
@@ -794,7 +749,6 @@ export default function Level4() {
               ? `${threats.length} ACTIVE INCIDENT${threats.length > 1 ? "S" : ""}`
               : "MONITORING..."}
           </div>
-
           {threats.length === 0 && !gameOver && (
             <div
               style={{
@@ -808,13 +762,12 @@ export default function Level4() {
               }}
             >
               <div style={{ fontSize: 36, marginBottom: 10 }}>🛡️</div>
-              <div style={{ fontSize: 14 }}>Network monitoring active...</div>
-              <div style={{ fontSize: 11, marginTop: 5 }}>
-                Incidents incoming
+              <div>Network monitoring active...</div>
+              <div style={{ fontSize: 11, marginTop: 4 }}>
+                Incidents incoming (~3s)
               </div>
             </div>
           )}
-
           <div
             style={{
               display: "grid",
@@ -826,13 +779,12 @@ export default function Level4() {
               <ThreatCard
                 key={t.uid}
                 threat={t}
-                onAnswer={(isCorrect) => handleAnswer(t.uid, t.pts, isCorrect)}
+                onAnswer={(ok) => handleAnswer(t.uid, t.pts, ok)}
               />
             ))}
           </div>
         </div>
 
-        {/* Priority legend */}
         <div
           style={{
             display: "flex",
@@ -851,7 +803,6 @@ export default function Level4() {
               <span style={{ color: c }}>●</span> {p}
             </span>
           ))}
-          <span style={{ marginLeft: "auto" }}>First incident in ~3s</span>
         </div>
       </div>
     </div>

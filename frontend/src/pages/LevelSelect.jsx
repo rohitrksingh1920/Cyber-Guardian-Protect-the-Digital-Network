@@ -1,6 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Topbar from "../components/Topbar";
+import {
+  isLevelUnlocked,
+  isLevelPassed,
+  getAllLevelStatuses,
+} from "./Levels/LevelGate";
 
 const LEVELS = [
   {
@@ -8,60 +13,68 @@ const LEVELS = [
     name: "Personal Device Security",
     icon: "💻",
     color: "#00b8ff",
-    desc: "Password safety, 2FA, safe browsing, recognizing phishing attempts.",
-    mechanic: "8 MCQ Questions",
+    desc: "Password safety, 2FA, safe browsing, phishing awareness.",
+    mechanic: "5 MCQ Questions",
+    req: "4/5 correct (80%)",
   },
   {
     id: 2,
     name: "Email & Communication",
     icon: "📧",
     color: "#00e676",
-    desc: "Detect phishing emails, malicious links, secure communication.",
-    mechanic: "8 Email Classifications",
+    desc: "Detect phishing emails, malicious links, secure comms.",
+    mechanic: "6 Email Classifications",
+    req: "5/6 correct (83%)",
   },
   {
     id: 3,
     name: "Malware Defense System",
     icon: "🦠",
     color: "#ffd600",
-    desc: "Viruses, malware detection, antivirus tools, system protection.",
-    mechanic: "12-File Scan",
+    desc: "Viruses, malware detection, antivirus tools.",
+    mechanic: "10-File Scan",
+    req: "3/4 malware caught",
   },
   {
     id: 4,
     name: "Network Security Ops",
     icon: "🌐",
     color: "#ff9100",
-    desc: "Firewalls, intrusion detection, monitoring suspicious activity.",
+    desc: "Firewalls, intrusion detection, suspicious activity.",
     mechanic: "Live Threat Defense",
+    req: "6/8 blocked (75%)",
   },
   {
     id: 5,
     name: "Advanced Cyber Defense",
     icon: "🔐",
     color: "#e040fb",
-    desc: "Encryption, data protection, identity management.",
-    mechanic: "Caesar Cipher Puzzles",
+    desc: "Encryption, ciphers, data protection.",
+    mechanic: "5 Cipher Puzzles",
+    req: "4/5 decrypted (80%)",
   },
   {
     id: 6,
     name: "Global Attack Simulation",
     icon: "💀",
     color: "#ff1744",
-    desc: "Large-scale cyber attacks — coordinate all defenses to survive.",
-    mechanic: "Boss Battle — 90s",
+    desc: "Coordinate all defenses to survive a full-scale attack.",
+    mechanic: "Boss Battle — 120s",
+    req: "5/6 tasks complete",
   },
 ];
 
 export default function LevelSelect() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const statuses = getAllLevelStatuses();
+  const passed = statuses.filter((s) => s.passed).length;
 
   return (
     <div style={{ minHeight: "100vh", animation: "fadeIn .35s ease" }}>
       <Topbar showBack backTo="/dashboard" backLabel="DASHBOARD" />
       <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
           <h1
             style={{
               fontFamily: "var(--font-head)",
@@ -73,10 +86,9 @@ export default function LevelSelect() {
             SELECT MISSION
           </h1>
           <p style={{ color: "var(--text-dim)", marginTop: 8 }}>
-            Choose your battleground — complete all 6 to become a Cyber Guardian
+            Score ≥75% on each level to unlock the next one
           </p>
         </div>
-
         {user && (
           <div
             style={{
@@ -84,7 +96,7 @@ export default function LevelSelect() {
               border: "1px solid var(--border)",
               borderRadius: 10,
               padding: "14px 20px",
-              marginBottom: 24,
+              marginBottom: 16,
               display: "flex",
               alignItems: "center",
               gap: 16,
@@ -97,7 +109,6 @@ export default function LevelSelect() {
                 fontSize: 10,
                 color: "var(--text-dim)",
                 letterSpacing: 2,
-                whiteSpace: "nowrap",
               }}
             >
               OVERALL PROGRESS
@@ -106,7 +117,7 @@ export default function LevelSelect() {
               <div className="progress-track">
                 <div
                   className="progress-fill pf-accent"
-                  style={{ width: `${Math.min((user.level / 6) * 100, 100)}%` }}
+                  style={{ width: `${(passed / 6) * 100}%` }}
                 />
               </div>
             </div>
@@ -115,58 +126,106 @@ export default function LevelSelect() {
                 fontFamily: "var(--font-head)",
                 color: "var(--accent)",
                 fontSize: 12,
-                whiteSpace: "nowrap",
               }}
             >
-              Level {Math.min(user.level, 6)} / 6
+              {passed} / 6 Passed
             </span>
           </div>
         )}
-
+        <div
+          style={{
+            background: "rgba(255,214,0,.07)",
+            border: "1px solid rgba(255,214,0,.25)",
+            borderRadius: 8,
+            padding: "9px 16px",
+            marginBottom: 20,
+            fontSize: 13,
+            color: "var(--gold)",
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
+          <span>🔒</span>
+          <span>
+            <strong>75% Rule:</strong> Score ≥75% to unlock the next level.
+            Failing resets all forward progress.
+          </span>
+        </div>
         <div className="grid-3">
           {LEVELS.map((lvl, i) => {
-            const isCurrent = user?.level === lvl.id;
+            const s = statuses.find((x) => x.level === lvl.id);
+            const unlocked = s?.unlocked;
+            const passed = s?.passed;
             return (
               <div
                 key={lvl.id}
-                onClick={() => navigate(`/level/${lvl.id}`)}
+                onClick={() => unlocked && navigate(`/level/${lvl.id}`)}
                 style={{
                   background: "var(--bg-card)",
-                  border: `1px solid ${isCurrent ? lvl.color : `${lvl.color}30`}`,
+                  border: `1px solid ${passed ? lvl.color : unlocked ? `${lvl.color}50` : "var(--border)"}`,
                   borderRadius: 12,
-                  padding: "26px 22px",
-                  cursor: "pointer",
+                  padding: "24px 20px",
+                  cursor: unlocked ? "pointer" : "not-allowed",
                   transition: "all .25s",
                   position: "relative",
                   overflow: "hidden",
-                  boxShadow: isCurrent ? `0 0 20px ${lvl.color}25` : "none",
+                  opacity: unlocked ? 1 : 0.5,
+                  boxShadow: passed ? `0 0 20px ${lvl.color}20` : "none",
                   animation: `fadeIn .4s ${i * 0.07}s ease both`,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-5px)";
-                  e.currentTarget.style.borderColor = lvl.color;
-                  e.currentTarget.style.boxShadow = `0 8px 30px ${lvl.color}20`;
+                  if (unlocked) {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = `0 8px 30px ${lvl.color}20`;
+                  }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "none";
-                  e.currentTarget.style.borderColor = isCurrent
-                    ? lvl.color
-                    : `${lvl.color}30`;
-                  e.currentTarget.style.boxShadow = isCurrent
-                    ? `0 0 20px ${lvl.color}25`
-                    : "none";
+                  e.currentTarget.style.boxShadow = passed
+                    ? `0 0 20px ${lvl.color}20`
+                    : "";
                 }}
               >
-                {isCurrent && (
-                  <div style={{ position: "absolute", top: 10, left: 12 }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 10,
+                    left: 12,
+                    display: "flex",
+                    gap: 6,
+                  }}
+                >
+                  {passed && (
+                    <span className="badge badge-green" style={{ fontSize: 9 }}>
+                      ✓ PASSED
+                    </span>
+                  )}
+                  {!passed && unlocked && lvl.id === 1 && (
                     <span
                       className="badge badge-accent"
                       style={{ fontSize: 9 }}
                     >
-                      CURRENT
+                      START HERE
                     </span>
-                  </div>
-                )}
+                  )}
+                  {!unlocked && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        padding: "2px 8px",
+                        borderRadius: 10,
+                        background: "rgba(0,0,0,.4)",
+                        border: "1px solid var(--border)",
+                        color: "var(--text-dim)",
+                        fontFamily: "var(--font-head)",
+                        letterSpacing: 1,
+                      }}
+                    >
+                      🔒 LOCKED
+                    </span>
+                  )}
+                </div>
                 <div
                   style={{
                     position: "absolute",
@@ -174,41 +233,26 @@ export default function LevelSelect() {
                     right: 14,
                     fontFamily: "var(--font-head)",
                     fontSize: 10,
-                    color: lvl.color,
+                    color: unlocked ? lvl.color : "var(--text-dim)",
                     letterSpacing: 1,
                   }}
                 >
                   LVL.{lvl.id}
                 </div>
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: -30,
-                    right: -30,
-                    width: 90,
-                    height: 90,
-                    borderRadius: "50%",
-                    background: lvl.color,
-                    opacity: 0.08,
-                    filter: "blur(20px)",
-                    pointerEvents: "none",
-                  }}
-                />
-
-                <div style={{ marginTop: isCurrent ? 18 : 0 }}>
+                <div style={{ marginTop: 20 }}>
                   <div
                     style={{
-                      fontSize: 44,
+                      fontSize: 42,
                       marginBottom: 12,
-                      filter: `drop-shadow(0 0 10px ${lvl.color}60)`,
+                      filter: `drop-shadow(0 0 8px ${unlocked ? lvl.color + "60" : "transparent"})`,
                     }}
                   >
-                    {lvl.icon}
+                    {unlocked ? lvl.icon : "🔒"}
                   </div>
                   <h3
                     style={{
                       fontFamily: "var(--font-head)",
-                      color: lvl.color,
+                      color: unlocked ? lvl.color : "var(--text-dim)",
                       fontSize: 12,
                       letterSpacing: 1,
                       marginBottom: 8,
@@ -221,7 +265,7 @@ export default function LevelSelect() {
                       fontSize: 12,
                       color: "var(--text-dim)",
                       lineHeight: 1.6,
-                      marginBottom: 12,
+                      marginBottom: 8,
                     }}
                   >
                     {lvl.desc}
@@ -230,7 +274,7 @@ export default function LevelSelect() {
                     style={{
                       fontSize: 10,
                       color: "var(--text-dim)",
-                      marginBottom: 16,
+                      marginBottom: 4,
                       fontFamily: "var(--font-head)",
                       letterSpacing: 1,
                     }}
@@ -239,19 +283,53 @@ export default function LevelSelect() {
                   </div>
                   <div
                     style={{
-                      padding: "7px 18px",
-                      background: `${lvl.color}18`,
-                      border: `1px solid ${lvl.color}`,
-                      color: lvl.color,
-                      fontFamily: "var(--font-head)",
                       fontSize: 10,
+                      color: passed
+                        ? "var(--green)"
+                        : unlocked
+                          ? "var(--gold)"
+                          : "var(--text-dim)",
+                      marginBottom: 14,
+                      fontFamily: "var(--font-head)",
                       letterSpacing: 1,
-                      borderRadius: 6,
-                      display: "inline-block",
                     }}
                   >
-                    ▶ ENTER ZONE
+                    {passed ? "✅ " : "🎯 "}
+                    {lvl.req}
                   </div>
+                  {unlocked ? (
+                    <div
+                      style={{
+                        padding: "7px 14px",
+                        background: `${lvl.color}18`,
+                        border: `1px solid ${lvl.color}`,
+                        color: lvl.color,
+                        fontFamily: "var(--font-head)",
+                        fontSize: 10,
+                        letterSpacing: 1,
+                        borderRadius: 6,
+                        display: "inline-block",
+                      }}
+                    >
+                      {passed ? "🔄 REPLAY" : "▶ ENTER ZONE"}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        padding: "7px 14px",
+                        background: "rgba(0,0,0,.3)",
+                        border: "1px solid var(--border)",
+                        color: "var(--text-dim)",
+                        fontFamily: "var(--font-head)",
+                        fontSize: 10,
+                        letterSpacing: 1,
+                        borderRadius: 6,
+                        display: "inline-block",
+                      }}
+                    >
+                      🔒 PASS LVL {lvl.id - 1} FIRST
+                    </div>
+                  )}
                 </div>
               </div>
             );
