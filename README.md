@@ -410,10 +410,8 @@ services:
 
 | Name | Roll Number | Course |
 |------|-------------|--------|
-| Uday Kumar Vijay   | 2501060136 | BCA (AI & DS) |
-| Sneha Kumari       | 2501060163 | BCA (AI & DS) |
-| Piyush Jain        | 2501060053 | BCA (AI & DS) |
-| Rishabh Bhardwaj   | 2501060109 | BCA (AI & DS) |
+| Rohit         | 2501060098 | BCA (AI & DS) |
+| Rakshit       | 2501060039 | BCA (AI & DS) |
 
 **Faculty Coordinator:** Dr. Surabhi Shanker  
 **Institution:** K.R. Mangalam University, Gurugram, Haryana
