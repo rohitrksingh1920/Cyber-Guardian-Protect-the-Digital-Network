@@ -14,8 +14,8 @@ const LEVELS = [
     icon: "💻",
     color: "#00b8ff",
     desc: "Password safety, 2FA, safe browsing, phishing awareness.",
-    mechanic: "5 MCQ Questions",
-    req: "4/5 correct (80%)",
+    mechanic: "10 Random Questions",
+    req: "6/10 correct (60%)",
   },
   {
     id: 2,
@@ -23,8 +23,8 @@ const LEVELS = [
     icon: "📧",
     color: "#00e676",
     desc: "Detect phishing emails, malicious links, secure comms.",
-    mechanic: "6 Email Classifications",
-    req: "5/6 correct (83%)",
+    mechanic: "10 Random Questions",
+    req: "6/10 correct (60%)",
   },
   {
     id: 3,
@@ -32,8 +32,8 @@ const LEVELS = [
     icon: "🦠",
     color: "#ffd600",
     desc: "Viruses, malware detection, antivirus tools.",
-    mechanic: "10-File Scan",
-    req: "3/4 malware caught",
+    mechanic: "10 Random Questions",
+    req: "6/10 correct (60%)",
   },
   {
     id: 4,
@@ -41,8 +41,8 @@ const LEVELS = [
     icon: "🌐",
     color: "#ff9100",
     desc: "Firewalls, intrusion detection, suspicious activity.",
-    mechanic: "Live Threat Defense",
-    req: "6/8 blocked (75%)",
+    mechanic: "10 Random Questions",
+    req: "6/10 correct (60%)",
   },
   {
     id: 5,
@@ -50,8 +50,8 @@ const LEVELS = [
     icon: "🔐",
     color: "#e040fb",
     desc: "Encryption, ciphers, data protection.",
-    mechanic: "5 Cipher Puzzles",
-    req: "4/5 decrypted (80%)",
+    mechanic: "10 Random Questions",
+    req: "6/10 correct (60%)",
   },
   {
     id: 6,
@@ -59,8 +59,8 @@ const LEVELS = [
     icon: "💀",
     color: "#ff1744",
     desc: "Coordinate all defenses to survive a full-scale attack.",
-    mechanic: "Boss Battle — 120s",
-    req: "5/6 tasks complete",
+    mechanic: "10 Random Questions",
+    req: "6/10 correct (60%)",
   },
 ];
 
@@ -68,7 +68,7 @@ export default function LevelSelect() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const statuses = getAllLevelStatuses();
-  const passed = statuses.filter((s) => s.passed).length;
+  const numPassed = statuses.filter((s) => s.passed).length;
 
   return (
     <div style={{ minHeight: "100vh", animation: "fadeIn .35s ease" }}>
@@ -86,9 +86,10 @@ export default function LevelSelect() {
             SELECT MISSION
           </h1>
           <p style={{ color: "var(--text-dim)", marginTop: 8 }}>
-            Score ≥75% on each level to unlock the next one
+            Score 60%+ on each level to unlock the next one
           </p>
         </div>
+
         {user && (
           <div
             style={{
@@ -117,7 +118,7 @@ export default function LevelSelect() {
               <div className="progress-track">
                 <div
                   className="progress-fill pf-accent"
-                  style={{ width: `${(passed / 6) * 100}%` }}
+                  style={{ width: `${(numPassed / 6) * 100}%` }}
                 />
               </div>
             </div>
@@ -128,30 +129,34 @@ export default function LevelSelect() {
                 fontSize: 12,
               }}
             >
-              {passed} / 6 Passed
+              {numPassed} / 6 Passed
             </span>
           </div>
         )}
+
+        {/* 60% rule banner */}
         <div
           style={{
-            background: "rgba(255,214,0,.07)",
-            border: "1px solid rgba(255,214,0,.25)",
+            background: "rgba(0,184,255,.07)",
+            border: "1px solid rgba(0,184,255,.25)",
             borderRadius: 8,
             padding: "9px 16px",
             marginBottom: 20,
             fontSize: 13,
-            color: "var(--gold)",
+            color: "var(--accent)",
             display: "flex",
             gap: 10,
             alignItems: "center",
           }}
         >
-          <span>🔒</span>
+          <span>🎯</span>
           <span>
-            <strong>75% Rule:</strong> Score ≥75% to unlock the next level.
-            Failing resets all forward progress.
+            <strong>60% Rule:</strong> Answer 6 out of 10 questions correctly to
+            unlock the next level. Failing resets forward progress — you must
+            retry from this level.
           </span>
         </div>
+
         <div className="grid-3">
           {LEVELS.map((lvl, i) => {
             const s = statuses.find((x) => x.level === lvl.id);
@@ -187,6 +192,7 @@ export default function LevelSelect() {
                     : "";
                 }}
               >
+                {/* Status badge */}
                 <div
                   style={{
                     position: "absolute",
@@ -226,6 +232,7 @@ export default function LevelSelect() {
                     </span>
                   )}
                 </div>
+
                 <div
                   style={{
                     position: "absolute",
@@ -239,7 +246,8 @@ export default function LevelSelect() {
                 >
                   LVL.{lvl.id}
                 </div>
-                <div style={{ marginTop: 20 }}>
+
+                <div style={{ marginTop: 22 }}>
                   <div
                     style={{
                       fontSize: 42,
@@ -334,6 +342,23 @@ export default function LevelSelect() {
               </div>
             );
           })}
+        </div>
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 20,
+            fontSize: 12,
+            color: "var(--text-dim)",
+          }}
+        >
+          Want to start over?{" "}
+          <span
+            style={{ color: "var(--accent)", cursor: "pointer" }}
+            onClick={() => navigate("/settings")}
+          >
+            Settings → Danger Zone → Reset All Progress
+          </span>
         </div>
       </div>
     </div>
