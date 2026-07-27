@@ -76,7 +76,7 @@ export default function Settings() {
 
   if (!user) return null;
 
-  // ── FIX: 'none' as a string, not undefined variable ──
+  //  FIX: 'none' as a string, not undefined variable 
   const Toggle = ({ value, onChange, color = "var(--accent)" }) => (
     <div
       onClick={() => onChange(!value)}

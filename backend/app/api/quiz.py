@@ -14,12 +14,12 @@ from app.questions_bank import QUESTION_BANK
 
 router = APIRouter()
 
-# ── Config ─────────────────────────────────────────────────────────────────
+#  Config 
 QUESTIONS_PER_SESSION = 10   # how many to show per play
 PASS_THRESHOLD        = 0.60  # 60% to pass (6/10 correct)
 
 
-# ── Schemas ────────────────────────────────────────────────────────────────
+#  Schemas 
 
 class QuestionOut(BaseModel):
     id:       int
@@ -70,7 +70,7 @@ class QuizSubmitResponse(BaseModel):
     level_up:  Optional[bool] = None
 
 
-# ── In-memory session cache (per process) ─────────────────────────────────
+#  In-memory session cache (per process) 
 # Maps session_id -> {"level": int, "question_ids": [int, ...]}
 # For production, use Redis; for showcase this is fine
 _sessions: dict = {}
@@ -82,7 +82,7 @@ def _make_session_id(user_id: str, level: int) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-# ── Endpoints ──────────────────────────────────────────────────────────────
+#  Endpoints 
 
 @router.get("/levels/{level}/questions/count")
 def get_question_count(level: int):

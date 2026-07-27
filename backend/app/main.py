@@ -1,7 +1,4 @@
-"""
-backend/app/main.py  — add quiz router
-Replace your existing main.py with this file.
-"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, users, game, leaderboard, achievements
