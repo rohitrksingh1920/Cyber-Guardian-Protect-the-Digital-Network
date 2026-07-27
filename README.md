@@ -410,8 +410,8 @@ services:
 
 | Name | Roll Number | Course |
 |------|-------------|--------|
-| Rohit         | 2501060098 | BCA (AI & DS) |
-| Rakshit       | 2501060039 | BCA (AI & DS) |
+| Rohit         | 2501060098 | BCA (AI & DS) - A |
+| Rakshit       | 2501060039 | BCA (AI & DS) - A |
 
 **Faculty Coordinator:** Dr. Surabhi Shanker  
 **Institution:** K.R. Mangalam University, Gurugram, Haryana
