@@ -1,449 +1,342 @@
 # 🛡️ Cyber Guardian — Protect the Digital Network
 
-> **IDEAS 4.0 — University Innovation Showcase**  
-> Category: I — Innovation  
-> K.R. Mangalam University, Gurugram
+> **Interactive Cybersecurity Learning Game** · IDEAS 4.0 University Innovation Showcase · K.R. Mangalam University
 
-An interactive cybersecurity learning game where players defend a digital network against real-world cyber threats. Built with **React + Vite**, **FastAPI**, and **PostgreSQL**.
-
----
-
-## 📸 Screenshots
-
-| Home | Dashboard | Level Select |
-|------|-----------|--------------|
-| Matrix rain + live leaderboard | XP bar, daily tips, achievements | 6 levels with mechanic tags |
-
-| Level 1 — Runner | Level 2 — Phishing | Level 6 — Boss |
-|------------------|--------------------|----------------|
-| Cyber-themed runner + quiz | Classify 6 realistic emails | 6 defense tasks under 120s |
+[![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)](https://fastapi.tiangolo.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql)](https://postgresql.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://docker.com)
 
 ---
 
-## 🎮 Game Overview
+## 📖 Overview
 
-Players take on the role of a **Cyber Guardian** — a security analyst defending a company's digital infrastructure. Each level teaches a different domain of cybersecurity through interactive gameplay.
+Cyber Guardian is a full-stack, browser-based cybersecurity education game where players defend a digital network across **6 progressive levels**, each teaching real-world security concepts through interactive MCQ challenges. The game combines gamification with genuine cybersecurity education — players don't just read about threats, they experience and defeat them.
 
-### Mission Flow
-```
-Select Level → Mission Brief → Gameplay → Score Points → XP & Achievements → Leaderboard
-```
+**Built for:** IDEAS 4.0 – University Innovation Showcase  
+**Category:** I – Innovation (Gamified Cybersecurity Awareness Platform)
 
 ---
 
-## 🗺️ Levels
+## 🎮 Game Features
 
-| # | Name | Mechanic | Teaches |
-|---|------|----------|---------|
-| 1 | **Password Fortress** | Cyber runner + 5 MCQ quiz | Password strength, 2FA, credential hygiene |
-| 2 | **Phishing Hunt** | Classify 6 emails + inspect panel | Email phishing detection, typosquatting, social engineering |
-| 3 | **Malware Hunter** | Flag malicious files + analysis popup | File extension risks, malware types, false positives |
-| 4 | **Network Guardian** | Multi-choice threat response | DDoS, SQL injection, MITM, brute force mitigation |
-| 5 | **Encryption Lab** | Mixed cipher puzzles | Caesar, ROT13, Morse, reverse cipher, real encryption facts |
-| 6 | **Global Attack Simulation** | Complete 6 defense tasks in 120s | Incident response, prioritization, coordinated defense |
-
----
-
-## ✨ Features
-
-### 🎯 Gameplay
-- **Level 1** — Cyber-themed runner (collect strong passwords / avoid malware) + rich quiz with checkmark feedback
-- **Level 2** — Email inspection panel, lives system, difficulty progression (Easy → Hard), per-email cybersecurity tips
-- **Level 3** — Hover to inspect file metadata, analysis popup, malware type labels, false positive penalty
-- **Level 4** — Multiple-choice incident response (correct tool matters), network health bar, consequence messages
-- **Level 5** — Mixed cipher types (Caesar, ROT13, Morse, Reverse), lives system, reference tables, encryption facts
-- **Level 6** — Randomized task order every run, dual progress bars (defense + integrity), win/lose screens
-- **Mission Briefing** before each level
-- **Final Statistics Screen** after each level with accuracy, grade, and lessons learned
-- **Combo System** with multiplier bonuses
-- **Next Level →** button on ResultModal
-
-### 🏅 Progression
-- **XP System** — Earn XP for every level completed; animated progress bar with shimmer
-- **Level System** — Levels 1–6+ based on total XP
-- **12 Achievements** — Auto-seeded on startup; unlock mid-game for bonus XP and points
-- **Global Leaderboard** — Real-time scores; filter by school code
-- **School Leaderboard** — Enter your institution code to compete with classmates
-
-### 💡 Education
-- **Daily Security Tip** — Rotating cybersecurity tip on Dashboard; dismissable; 10 topics
-- **Rich Quiz Feedback** — After each answer: checkmarks for correct options + "why" explanation
-- **Cyber Tips** — Short memorable tip after every phishing email verdict
-- **Encryption Facts** — Real-world cryptography context after each cipher puzzle
-- **Malware Education** — Trojan, Ransomware, Spyware, Keylogger, Adware explained in-game
-
-### 🎨 UI/UX
-- Cyberpunk dark theme (Orbitron + Exo 2 fonts)
-- 15 CSS keyframe animations (fadeIn, pop, shake, pulse, shimmer, toastIn/Out, blink, floatUp)
-- Page enter animations, hover glow effects, smooth transitions
-- Toast notification system (success / error / info / gold)
-- Skeleton loading states
-- Responsive design (900px, 600px breakpoints)
-- ← Back button on every page
-- Active nav link underline indicator
+| Feature | Details |
+|---------|---------|
+| 6 Progressive Levels | Personal Security → Global Attack Simulation |
+| 600-Question Bank | 100 unique MCQ questions per level |
+| Random Question Selection | 10 different random questions every session |
+| 60% Pass Threshold | Score ≥6/10 to unlock the next level |
+| Fail = Reset Forward Progress | Must retry from Level 1 if any level fails |
+| XP & Scoring System | Earn XP, level up, track total score |
+| Achievements & Badges | 12+ achievements with Bronze→Legendary badge tiers |
+| Leaderboard | Global + School/Institution Code filtering |
+| School Code System | Private class leaderboards via institution codes |
+| Daily Security Tips | Toggle-able cybersecurity tips on dashboard |
+| Sound Effects | Toggle-able in-game sounds |
+| Animations | Toggle-able page and card animations |
+| Reset All Progress | Full progress wipe with confirmation |
+| Docker Ready | Single-command deployment |
 
 ---
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + Vite 5 |
-| Styling | Pure CSS Variables + Orbitron / Exo 2 (Google Fonts) |
-| Routing | React Router DOM v6 |
-| HTTP | Axios with JWT auto-refresh interceptor |
-| Backend | FastAPI (Python 3.12) |
-| Database | PostgreSQL 16 |
-| ORM | SQLAlchemy 2.0 |
-| Auth | JWT (python-jose) + bcrypt (passlib) |
-| Containerization | Docker + Docker Compose |
-| Web Server | Nginx (frontend production) |
+### Frontend
+- **React 18** + **Vite** — fast SPA with hot reload
+- **React Router v6** — client-side routing
+- Custom CSS design system (cyberpunk dark theme, CSS variables)
+- localStorage for progress, settings, and preferences
+
+### Backend
+- **FastAPI** (Python) — async REST API
+- **SQLAlchemy** ORM with **PostgreSQL** database
+- **JWT Authentication** (access + refresh tokens)
+- **Uvicorn** ASGI server
+
+### Infrastructure
+- **Docker** + **Docker Compose** — full containerized deployment
+- **PostgreSQL 15** database container
+- Health checks and auto-restart policies
 
 ---
 
-## 📁 Project Structure
+## 🗂️ Project Structure
 
 ```
-Cyber-Guardian/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── __init__.py
-│   │   │   ├── achievements.py   ← Auto-seeds 12 achievements on startup
-│   │   │   ├── auth.py           ← Register, login, refresh token
-│   │   │   ├── game.py           ← Level submit, XP calculation, achievement checks
-│   │   │   ├── leaderboard.py    ← Global + school-filtered rankings
-│   │   │   └── users.py          ← Profile get/update
-│   │   ├── core/
-│   │   │   └── security.py       ← JWT creation, bcrypt, get_current_user
-│   │   ├── __init__.py
-│   │   ├── database.py           ← SQLAlchemy engine + SessionLocal
-│   │   ├── main.py               ← FastAPI app, CORS, startup seed
-│   │   ├── models.py             ← User, Score, Achievement, UserAchievement
-│   │   └── schemas.py            ← Pydantic request/response models
-│   ├── .env
-│   ├── .env.example
-│   ├── Dockerfile
-│   └── requirements.txt
-│
+cyber-guardian/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── DailyTip.jsx      ← Rotating daily security tip (NEW)
-│   │   │   ├── ResultModal.jsx   ← Confetti, XP animation, Next Level button
-│   │   │   ├── RunnerStage.jsx   ← Cyber Dash runner game engine
-│   │   │   ├── Topbar.jsx        ← Back button support, active nav, scroll shadow
-│   │   │   └── XPBar.jsx         ← Animated shimmer progress bar
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx   ← JWT auth state, login/register/logout/refreshUser
-│   │   ├── hooks/
-│   │   │   └── useToast.js       ← Global toast notification system (NEW)
+│   │   │   ├── Topbar.jsx          # Navigation bar
+│   │   │   ├── XPBar.jsx           # Animated XP progress
+│   │   │   ├── ResultModal.jsx     # Mission Complete overlay
+│   │   │   ├── SystemBreach.jsx    # Level Failed screen (60% rule)
+│   │   │   ├── DailyTip.jsx        # Dismissable daily tip card
+│   │   │   └── RunnerStage.jsx     # Level 1 runner mini-game
 │   │   ├── pages/
-│   │   │   ├── Levels/
-│   │   │   │   ├── Level1.jsx    ← Mission brief + runner + rich quiz + stats screen
-│   │   │   │   ├── Level2.jsx    ← Inspect panel + lives + difficulty progression
-│   │   │   │   ├── Level3.jsx    ← Hover details + analysis popup + malware types
-│   │   │   │   ├── Level4.jsx    ← Multi-choice response + health bar + consequences
-│   │   │   │   ├── Level5.jsx    ← Mixed ciphers + lives + reference tables
-│   │   │   │   └── Level6.jsx    ← Random task order + integrity drain + win/lose
-│   │   │   ├── Achievements.jsx  ← Filter tabs, progress bar, unlock dates
-│   │   │   ├── Dashboard.jsx     ← Daily tip, animated stats, skeleton loading
-│   │   │   ├── Game.jsx          ← Cyber Dash main game page
-│   │   │   ├── Home.jsx          ← Matrix rain, live leaderboard panel
-│   │   │   ├── HowToPlay.jsx     ← Mission flow, core mechanics, scoring
-│   │   │   ├── Leaderboard.jsx   ← School filter, current user highlight
-│   │   │   ├── LevelSelect.jsx   ← Progress bar, CURRENT badge, mechanic tags
-│   │   │   ├── Login.jsx         ← Loading spinner, error display
-│   │   │   ├── Register.jsx      ← Password strength indicator, validation
-│   │   │   └── Settings.jsx      ← 5-tab layout: Profile, Gameplay, Stats, Privacy, Danger
+│   │   │   ├── Dashboard.jsx       # Agent dashboard with stats
+│   │   │   ├── LevelSelect.jsx     # Mission select (60% rule)
+│   │   │   ├── Achievements.jsx    # Badges + achievements
+│   │   │   ├── Leaderboard.jsx     # Global + school filter
+│   │   │   ├── Settings.jsx        # 5-tab settings page
+│   │   │   ├── HowToPlay.jsx       # Game guide
+│   │   │   └── Levels/
+│   │   │       ├── LevelGate.js    # Progression logic (localStorage)
+│   │   │       ├── QuizLevel.jsx   # Universal quiz component
+│   │   │       ├── Level1.jsx      # Password Fortress (Runner + Quiz)
+│   │   │       ├── Level2.jsx      # Phishing Hunt
+│   │   │       ├── Level3.jsx      # Malware Hunter
+│   │   │       ├── Level4.jsx      # Network Guardian
+│   │   │       ├── Level5.jsx      # Encryption Lab
+│   │   │       └── Level6.jsx      # Global Attack Simulation
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx     # JWT auth state
 │   │   ├── services/
-│   │   │   └── api.js            ← Axios + JWT auto-refresh on 401
-│   │   ├── App.jsx               ← Routes + ToastContainer wrapper
-│   │   ├── index.css             ← Global styles, animations, design system
-│   │   └── main.jsx              ← React entry point
-│   ├── Dockerfile
-│   ├── index.html
-│   ├── nginx.conf
+│   │   │   └── api.js              # Axios API client
+│   │   ├── hooks/
+│   │   │   └── useToast.js         # Toast notification system
+│   │   ├── App.jsx
+│   │   └── index.css               # Full design system
 │   ├── package.json
 │   └── vite.config.js
 │
+├── backend/
+│   └── app/
+│       ├── main.py                 # FastAPI app + router registration
+│       ├── database.py             # SQLAlchemy engine + session
+│       ├── models.py               # DB models (User, Score, Achievement)
+│       ├── schemas.py              # Pydantic request/response schemas
+│       ├── questions_bank.py       # 600 questions (100 per level)
+│       └── api/
+│           ├── auth.py             # /auth/register, /auth/login, /auth/refresh
+│           ├── users.py            # /users/profile
+│           ├── game.py             # /game/level/submit
+│           ├── quiz.py             # /quiz/session/start, /quiz/session/submit
+│           ├── leaderboard.py      # /leaderboard/
+│           └── achievements.py     # /achievements/
+│
 ├── docker-compose.yml
+├── Dockerfile.frontend
+├── Dockerfile.backend
 └── README.md
 ```
 
 ---
 
-## 🗄️ Database Schema
-
-### users
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| username | VARCHAR(50) | Unique agent name |
-| email | VARCHAR(100) | Unique email |
-| password_hash | TEXT | bcrypt hashed |
-| level | INTEGER | Current player level (1–6+) |
-| xp | INTEGER | Total XP earned |
-| total_score | INTEGER | Cumulative game score |
-| avatar | VARCHAR(10) | Emoji avatar |
-| school_code | VARCHAR(20) | Institution code (optional) |
-| show_on_leaderboard | BOOLEAN | Privacy setting |
-| created_at | TIMESTAMP | Registration date |
-
-### achievements
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Primary key |
-| key | VARCHAR(50) | Unique identifier |
-| title | VARCHAR(100) | Display name |
-| description | TEXT | How to unlock |
-| icon | VARCHAR(10) | Emoji |
-| xp_reward | INTEGER | XP on unlock |
-| pts_reward | INTEGER | Score points |
-
-### scores
-| Column | Type | Description |
-|--------|------|-------------|
-| user_id | UUID | FK → users |
-| level | INTEGER | Level number (1–6) |
-| score | INTEGER | Points scored |
-| accuracy | FLOAT | 0.0–100.0% |
-| time_taken | INTEGER | Seconds |
-| difficulty | VARCHAR | agent / elite |
-| completed | BOOLEAN | Completed flag |
-
-### user_achievements
-| Column | Type | Description |
-|--------|------|-------------|
-| user_id | UUID | FK → users |
-| achievement_id | INTEGER | FK → achievements |
-| unlocked_at | TIMESTAMP | When unlocked |
-
----
-
-## 🔌 API Endpoints
-
-### Auth
-```
-POST /auth/register     → { access_token, refresh_token }
-POST /auth/login        → { access_token, refresh_token }
-POST /auth/refresh      → { access_token, refresh_token }
-```
-
-### Users
-```
-GET  /users/profile     → UserProfile
-PUT  /users/profile     → UserProfile  (avatar, school_code, show_on_leaderboard)
-```
-
-### Game
-```
-GET  /game/levels                → List of 6 level configs
-POST /game/level/submit          → { xp_earned, new_level, new_total_xp, new_total_score, achievements_unlocked, level_up }
-```
-
-### Leaderboard
-```
-GET  /leaderboard/?limit=50                        → Global top 50
-GET  /leaderboard/?limit=50&school_code=KRMU2026   → School leaderboard
-```
-
-### Achievements
-```
-GET  /achievements/     → All 12 achievements with unlock status for current user
-POST /achievements/seed → Seed default achievements (auto-called on startup)
-```
-
----
-
-## 🏆 Achievements
-
-| Key | Title | How to Unlock | XP |
-|-----|-------|--------------|-----|
-| first_line | First Line of Defense | Complete Level 1 with 100% accuracy | 200 |
-| phishing_phreak | Phishing Phreak | Score 800+ on Level 2 | 300 |
-| speed_demon | Speed Demon | Finish any mission in under 60 seconds | 150 |
-| combo_master | Combo Master | Achieve a ×5 combo chain | 200 |
-| network_guardian | Network Guardian | Score 1000+ on Level 4 | 250 |
-| precision_agent | Precision Agent | Complete any mission with 100% accuracy | 200 |
-| inbox_zero | Inbox Zero Threats | Complete Level 2 with 100% accuracy | 180 |
-| early_access | Early Access | Be among first 100 agents to register | 100 |
-| boss_slayer | Boss Slayer | Score 900+ on Level 3 | 350 |
-| crypto_king | Crypto King | Complete Level 5 with 100% accuracy | 400 |
-| legendary_defender | Legendary Defender | Complete Level 6 | 750 |
-| cyber_scholar | Cyber Scholar | Answer 100 security questions correctly | 350 |
-
----
-
 ## 🚀 Quick Start
 
-### Option A — Docker (Recommended)
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
+- Ports `5173`, `8000`, `5432` available
+
+### 1. Clone & Start
 
 ```bash
-# Clone
-git clone https://github.com/your-repo/cyber-guardian.git
+git clone https://github.com/your-org/cyber-guardian.git
 cd cyber-guardian
-
-# Start everything (DB + Backend + Frontend)
-docker-compose up --build
-
-# Open in browser
-# Frontend: http://localhost:5173
-# API docs: http://localhost:8000/docs
+docker compose up --build
 ```
 
-Achievements seed automatically on first startup. No extra steps needed.
+### 2. Access
+
+| Service | URL |
+|---------|-----|
+| 🎮 Game (Frontend) | http://localhost:5173 |
+| ⚡ API (Backend) | http://localhost:8000 |
+| 📚 API Docs | http://localhost:8000/docs |
+
+### 3. First Run
+1. Open http://localhost:5173
+2. Click **Register** — create your agent account
+3. Click **PLAY NOW** to start Level 1
+4. Score 6/10 or above to unlock the next level
 
 ---
 
-### Option B — Local Development
+## 🔧 Local Development (without Docker)
 
-#### 1. PostgreSQL
-```sql
--- Create database
-CREATE DATABASE cyberguardian;
-```
+### Backend
 
-#### 2. Backend
 ```bash
 cd backend
-
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Mac/Linux
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
-cp .env.example .env
-# Edit .env:
-# DATABASE_URL=postgresql://postgres:password@localhost:5432/cyberguardian
-# SECRET_KEY=your-super-secret-key-here
+# Set environment variables
+export DATABASE_URL="postgresql://postgres:password@localhost:5432/cyberguardian"
+export SECRET_KEY="your-secret-key-here"
 
-# Start server
+# Run
 uvicorn app.main:app --reload --port 8000
 ```
 
-API interactive docs: http://localhost:8000/docs
+### Frontend
 
-#### 3. Frontend
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
+# → http://localhost:5173
 ```
-
-Frontend: http://localhost:5173
 
 ---
 
-## 🔐 Authentication Flow
+## 🎯 Game Levels
+
+| # | Level | Topic | Questions |
+|---|-------|-------|-----------|
+| 1 | 💻 Password Fortress | Personal Device Security | 100 |
+| 2 | 📧 Phishing Hunt | Email & Communication Security | 100 |
+| 3 | 🦠 Malware Hunter | Malware Defense System | 100 |
+| 4 | 🌐 Network Guardian | Network Security Operations | 100 |
+| 5 | 🔐 Encryption Lab | Advanced Cyber Defense | 100 |
+| 6 | 💀 Global Attack Simulation | Incident Response & Advanced Threats | 100 |
+| | **Total** | | **600** |
+
+### How Questions Work
+- Each session randomly selects **10 questions** from that level's bank of 100
+- Correct answers are **never sent to the client** — all validation is server-side
+- Every replay gives a different set — no two sessions are identical
+
+---
+
+## 📊 Passing Rules
 
 ```
-Register/Login → access_token (1hr) + refresh_token (7 days)
-     ↓
-Every API request → Authorization: Bearer <access_token>
-     ↓
-On 401 → Auto-refresh via /auth/refresh
-     ↓
-New tokens stored in localStorage
+Score ≥ 60%  (6/10 or more correct)  →  PASS  →  Next level unlocked
+Score  < 60%  (5/10 or fewer correct) →  FAIL  →  All forward progress RESET
 ```
+
+**Fail Rule:** Failing any level (e.g., Level 4) locks Levels 2–6. The player must restart from Level 1 and clear every level sequentially.
+
+---
+
+## 🏅 Badge & Achievement System
+
+### Badge Tiers (based on total achievements unlocked)
+
+| Tier | Achievements | Badge |
+|------|-------------|-------|
+| 🥉 Bronze | 0–2 | Starting out |
+| 🥈 Silver | 3–5 | Building skills |
+| 🥇 Gold | 6–8 | Skilled defender |
+| 💎 Platinum | 9–10 | Elite agent |
+| 💠 Diamond | 11 | Expert guardian |
+| 🔱 Legendary | 12 | Master of all |
+
+### Level Badges
+
+| Badge | Unlocked When |
+|-------|--------------|
+| 🖥️ Device Defender | Complete Level 1 |
+| 📨 Secure Messenger | Complete Level 2 |
+| 🦠 Malware Hunter | Complete Level 3 |
+| 🌐 Network Guardian | Complete Level 4 |
+| 🔐 Cyber Strategist | Complete Level 5 |
+| 💀 Global Defender | Complete Level 6 |
+
+### Special Badges
+
+| Badge | Condition |
+|-------|-----------|
+| 🧠 Cyber Genius | Score 100% on any level |
+| 🏆 Elite Guardian | Complete all 6 levels |
+| 🎯 Perfectionist | 100% accuracy in a session |
+| 🔥 Rising Guardian | 3 consecutive level clears |
+| 👑 Legendary Defender | Complete all levels without any failure |
+
+---
+
+## 🔌 API Reference
+
+### Authentication
+```
+POST /auth/register    { username, email, password }
+POST /auth/login       { email, password } → { access_token, refresh_token }
+POST /auth/refresh     { refresh_token }  → { access_token }
+```
+
+### Quiz (Question Bank)
+```
+POST /quiz/session/start    { level: 1-6 }
+     → { session_id, questions[], total, pass_at }
+
+POST /quiz/session/submit   { session_id, level, answers[], time_taken }
+     → { correct, total, pct, passed, results[], xp_earned, ... }
+
+GET  /quiz/bank/stats
+     → { total_questions: 600, levels: { "1":100, ... } }
+```
+
+### User & Progress
+```
+GET  /users/profile
+PUT  /users/profile   { avatar, school_code, show_on_leaderboard }
+POST /game/level/submit  { level, score, accuracy, time_taken, difficulty }
+```
+
+### Social
+```
+GET  /leaderboard/?limit=50&school_code=KRMU2026
+GET  /achievements/
+```
+
+---
+
+## ⚙️ Settings
+
+| Setting | Description |
+|---------|-------------|
+| 🔊 Sound Effects | Toggle in-game alert and action sounds |
+| ✨ Animations | Toggle page transitions and visual effects |
+| 💡 Daily Security Tips | Toggle daily tip on dashboard |
+| 🏫 School Code | Join class leaderboard (e.g., KRMU2026) |
+| 🌐 Show on Leaderboard | Toggle global visibility |
+| 🔄 Reset All Progress | Wipe all scores, achievements, and level progress |
+
+---
+
+## 🏫 School Code System
+
+Teachers can create a private class leaderboard by sharing a code:
+
+1. Teacher decides a code: `KRMU2026`
+2. Students enter it in **Settings → Privacy → School Code**
+3. Filter leaderboard by the code to see only classmates
+
+No registration needed — codes are free-form strings.
 
 ---
 
 ## 🌐 Environment Variables
 
-### Backend `.env`
+### Backend (`.env`)
 ```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/cyberguardian
-SECRET_KEY=your-super-secret-key-change-in-production
+DATABASE_URL=postgresql://postgres:password@db:5432/cyberguardian
+SECRET_KEY=your-super-secret-jwt-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
 
-### Frontend (Vite proxy in `vite.config.js`)
+### Frontend (`vite.config.js`)
 ```js
-// All /api/* requests proxy to http://localhost:8000
-// No .env needed for local dev
+// VITE_API_URL defaults to http://localhost:8000
 ```
-
----
-
-## 🐳 Docker Services
-
-```yaml
-services:
-  db:        PostgreSQL 16      → port 5432
-  backend:   FastAPI + Uvicorn  → port 8000
-  frontend:  React + Nginx      → port 5173 (80 in container)
-```
-
----
-
-## 📦 Deployment
-
-### Render / Railway (Recommended for showcase)
-
-**Backend**
-1. Create Web Service from `backend/` folder
-2. Build: `pip install -r requirements.txt`
-3. Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Add env vars: `DATABASE_URL`, `SECRET_KEY`
-
-**Database**
-- Create PostgreSQL instance on Render/Railway
-- Copy connection string to `DATABASE_URL`
-
-**Frontend**
-1. Create Static Site from `frontend/` folder
-2. Build: `npm install && npm run build`
-3. Publish directory: `dist`
-4. Update `vite.config.js` proxy target to your deployed backend URL
 
 ---
 
 ## 👥 Team
 
-| Name | Roll Number | Course |
-|------|-------------|--------|
-| Rohit         | 2501060098 | BCA (AI & DS) |
-| Rakshit       | 2501060039 | BCA (AI & DS) |
+| Name | Program | Enrollment |
+|------|---------|-----------|
+| Rohit          | BCA (AI & DS) - A | 2501060098 |
+| Rakshit Kamboj | BCA (AI & DS) - A | 2501060039 |
 
 **Faculty Coordinator:** Dr. Surabhi Shanker  
-**Institution:** K.R. Mangalam University, Gurugram, Haryana
-
----
-
-## 🔭 Future Roadmap
-
-### Part 2 — Analytics & Profiles
-- [ ] Player profile page with performance graphs
-- [ ] Learning streak tracker (daily login rewards)
-- [ ] Per-level statistics and history
-- [ ] School admin dashboard
-
-### Part 3 — AI Features
-- [ ] AI Cyber Tutor — ask questions about any security concept
-- [ ] Intelligent hint system powered by Claude API
-- [ ] Adaptive difficulty based on player performance
-- [ ] AI-generated phishing email examples
-
-### Part 4 — Advanced Content
-- [ ] Level 7+: Social Engineering, Cloud Security, IoT Threats
-- [ ] Multiplayer challenge mode
-- [ ] Certificate generation on 100% completion
-- [ ] Mobile-responsive touch controls
+**Institution:** K.R. Mangalam University, Gurugram  
+**Event:** IDEAS 4.0 – University Innovation Showcase
 
 ---
 
 ## 📄 License
 
-This project was created for academic purposes as part of the **IDEAS 4.0 University Innovation Showcase** at K.R. Mangalam University.
-
----
-
-*🛡️ Learn. Defend. Secure the future.*
+Academic project — K.R. Mangalam University. All rights reserved.
