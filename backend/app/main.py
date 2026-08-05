@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, users, game, leaderboard, achievements
-from app.api import quiz                         # ← NEW
+from app.api import quiz
 from app.database import engine, Base, SessionLocal
 from app.api.achievements import seed_default_achievements
 
